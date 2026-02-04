@@ -76,9 +76,13 @@ export function Sidebar({ className }: SidebarProps) {
         }
     }, []);
 
-    const handleMouseEnter = () => setIsVisible(true);
+    const handleMouseEnter = () => {
+        setIsVisible(true);
+    };
     const handleMouseLeave = () => {
-        if (!isPinned) setIsVisible(false);
+        if (!isPinned) {
+            setIsVisible(false);
+        }
     };
 
     // Keyboard shortcut (Cmd/Ctrl + \)

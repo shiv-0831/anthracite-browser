@@ -87,6 +87,11 @@ contextBridge.exposeInMainWorld('electron', {
             return () => ipcRenderer.removeListener('ad-block-status', subscription)
         },
     },
+
+    // Sidebar
+    sidebar: {
+        setOpen: (isOpen: boolean) => ipcRenderer.invoke('sidebar-set-open', isOpen),
+    },
 })
 
 // ============================================
@@ -126,8 +131,11 @@ declare global {
                 onBlocked: (callback: (data: { count: number; url?: string }) => void) => () => void
                 onStatusChange: (callback: (data: { enabled: boolean; count: number }) => void) => () => void
             }
+            sidebar: {
+                setOpen: (isOpen: boolean) => Promise<void>
+            }
         }
     }
 }
 
-export {}
+export { }

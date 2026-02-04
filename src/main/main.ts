@@ -34,7 +34,11 @@ let tabIdCounter = 0
 
 // UI bounds configuration
 const UI_TOP_HEIGHT = 52 // URL bar height
-const UI_SIDEBAR_TRIGGER_WIDTH = 16 // Width of hover zone for sidebar
+const UI_SIDEBAR_WIDTH = 296 // Sidebar width (280px) + padding (16px)
+const UI_TRIGGER_WIDTH = 16 // Always visible trigger zone for sidebar hover
+
+// Sidebar state
+let sidebarOpen = false
 
 // ============================================
 // Utility Functions
@@ -47,10 +51,11 @@ function generateTabId(): string {
 function getBrowserViewBounds(): Electron.Rectangle {
     if (!win) return { x: 0, y: 0, width: 800, height: 600 }
     const { width, height } = win.getContentBounds()
+    // Always leave 16px trigger zone on left for sidebar hover
     return {
-        x: UI_SIDEBAR_TRIGGER_WIDTH,
+        x: UI_TRIGGER_WIDTH,
         y: UI_TOP_HEIGHT,
-        width: width - UI_SIDEBAR_TRIGGER_WIDTH,
+        width: width - UI_TRIGGER_WIDTH,
         height: height - UI_TOP_HEIGHT
     }
 }
@@ -158,42 +163,22 @@ function createTab(url: string = 'poseidon://newtab'): Tab {
 
 function switchToTab(tabId: string): void {
     const tab = tabs.get(tabId)
-    if (!tab || !win) return
+    if (!tab) return
 
-    // Remove current view
-    if (activeTabId) {
-        const currentTab = tabs.get(activeTabId)
-        if (currentTab) {
-            win.removeBrowserView(currentTab.view)
-        }
-    }
-
-    // Add new view
-    // Add new view ONLY if it's not the internal new tab page
-    if (tab.url !== 'poseidon://newtab') {
-        win.addBrowserView(tab.view)
-        tab.view.setBounds(getBrowserViewBounds())
-        tab.view.setAutoResize({ width: true, height: true })
-    }
-
+    // Just update active tab - webview in renderer handles display
     activeTabId = tabId
 
-    // Send updates
+    // Send updates to renderer
     sendActiveTabUpdate()
     sendTabUpdate(tab)
 }
 
 function closeTab(tabId: string): void {
     const tab = tabs.get(tabId)
-    if (!tab || !win) return
+    if (!tab) return
 
-    // Remove from window if active
-    if (activeTabId === tabId) {
-        win.removeBrowserView(tab.view)
-    }
-
-    // Destroy the view
-    ; (tab.view.webContents as any).destroy()
+        // Destroy the view (for cleanup)
+        ; (tab.view.webContents as any).destroy()
     tabs.delete(tabId)
 
     // If this was the active tab, switch to another
@@ -218,16 +203,9 @@ function navigateTab(tabId: string, url: string): void {
 
     const normalizedUrl = normalizeUrl(url)
 
-    // If we are navigating FROM internal page TO a web page, we need to attach the view
-    if (tab.url === 'poseidon://newtab' && normalizedUrl !== 'poseidon://newtab') {
-        if (win && activeTabId === tabId) {
-            win.addBrowserView(tab.view)
-            tab.view.setBounds(getBrowserViewBounds())
-            tab.view.setAutoResize({ width: true, height: true })
-        }
-    }
-
-    tab.view.webContents.loadURL(normalizedUrl)
+    // Update tab URL - webview in renderer handles actual navigation
+    tab.url = normalizedUrl
+    sendTabUpdate(tab)
 }
 
 // ============================================
@@ -433,6 +411,13 @@ function setupIPC(): void {
         blockedCount = 0
         return { count: blockedCount }
     })
+
+    // Sidebar state tracking (no bounds adjustment - sidebar floats over)
+    ipcMain.handle('sidebar-set-open', (_, isOpen: boolean) => {
+        sidebarOpen = isOpen
+        // Note: We don't resize BrowserView - the sidebar floats over the content
+        // The 16px trigger zone is always visible for hover detection
+    })
 }
 
 // ============================================
@@ -449,6 +434,7 @@ function createWindow(): void {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
+            webviewTag: true, // Enable <webview> tag for proper z-index layering
         },
         backgroundColor: '#FFFFFF',
         titleBarStyle: 'hiddenInset',
@@ -459,16 +445,6 @@ function createWindow(): void {
     // Show when ready to prevent flash
     win.once('ready-to-show', () => {
         win?.show()
-    })
-
-    // Handle resize to update BrowserView bounds
-    win.on('resize', () => {
-        if (activeTabId) {
-            const tab = tabs.get(activeTabId)
-            if (tab) {
-                tab.view.setBounds(getBrowserViewBounds())
-            }
-        }
     })
 
     // Load the UI

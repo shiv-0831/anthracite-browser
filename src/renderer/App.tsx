@@ -1,65 +1,127 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
 import { HomePage } from './components/HomePage';
 import { cn } from './lib/utils';
 
+interface Tab {
+    id: string;
+    url: string;
+    title: string;
+    favicon: string;
+    isLoading: boolean;
+}
+
 function App() {
     const [isReady, setIsReady] = useState(false);
-    const [activeTab, setActiveTab] = useState<{ url: string } | null>(null);
+    const [tabs, setTabs] = useState<Tab[]>([]);
+    const [activeTabId, setActiveTabId] = useState<string | null>(null);
+    const webviewRefs = useRef<Map<string, Electron.WebviewTag>>(new Map());
+
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    const isHomePage = activeTab?.url === 'poseidon://newtab' || activeTab?.url.startsWith('poseidon://');
 
     useEffect(() => {
-        // Wait for electron APIs to be available
-        if (typeof window !== 'undefined' && window.electron) {
-            setIsReady(true);
-        }
-        // Wait for electron APIs to be available
         if (typeof window !== 'undefined' && window.electron) {
             setIsReady(true);
 
-            // Get initial active tab
-            window.electron.tabs.getActive().then(setActiveTab);
+            // Get initial tabs
+            window.electron.tabs.getAll().then((initialTabs: Tab[]) => {
+                setTabs(initialTabs);
+            });
 
-            // Listen for active tab changes
-            const unsubscribeActive = window.electron.tabs.onActiveTabChanged(setActiveTab);
+            // Get active tab
+            window.electron.tabs.getActive().then((tab: Tab | null) => {
+                if (tab) setActiveTabId(tab.id);
+            });
 
-            // Listen for updates to current tab (in case URL changes)
-            const unsubscribeUpdate = window.electron.tabs.onTabUpdated((updatedTab) => {
-                setActiveTab(prev => (prev && (prev as any).id === updatedTab.id) ? updatedTab : prev);
+            // Listen for tab updates
+            const unsubscribeTabs = window.electron.tabs.onTabsUpdated((updatedTabs: Tab[]) => {
+                setTabs(updatedTabs);
+            });
+
+            const unsubscribeActive = window.electron.tabs.onActiveTabChanged((tab: Tab | null) => {
+                if (tab) setActiveTabId(tab.id);
+            });
+
+            const unsubscribeUpdate = window.electron.tabs.onTabUpdated((updatedTab: Tab) => {
+                setTabs(prev => prev.map(t => t.id === updatedTab.id ? updatedTab : t));
             });
 
             return () => {
+                unsubscribeTabs();
                 unsubscribeActive();
                 unsubscribeUpdate();
             };
         }
     }, []);
 
+    // Get or create webview ref
+    const getWebviewRef = useCallback((tabId: string) => {
+        return (element: Electron.WebviewTag | null) => {
+            if (element) {
+                webviewRefs.current.set(tabId, element);
+            } else {
+                webviewRefs.current.delete(tabId);
+            }
+        };
+    }, []);
+
+    // Navigate in active webview
+    const handleNavigate = useCallback((url: string) => {
+        if (!activeTabId) return;
+        const webview = webviewRefs.current.get(activeTabId);
+        if (webview && !url.startsWith('poseidon://')) {
+            webview.src = url;
+        }
+        // Also notify main process
+        window.electron?.navigation.navigate(url);
+    }, [activeTabId]);
+
     return (
         <div className="h-screen w-full bg-surface overflow-hidden font-sans flex flex-col">
             {/* Top Navigation Bar */}
             <TopBar />
 
-            {/* Main Content Area - BrowserView renders below this */}
+            {/* Main Content Area */}
             <main className="flex-1 relative">
-                {/* Floating Sidebar */}
+                {/* Floating Sidebar - z-index ensures it's above webview */}
                 <Sidebar />
 
-                {/*
-                    The BrowserView is managed by Electron main process
-                    and renders directly below the TopBar (52px from top).
-                    This area is just a placeholder/background.
-                */}
+                {/* Loading state */}
                 {!isReady ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-surface">
+                    <div className="absolute inset-0 flex items-center justify-center bg-surface z-10">
                         <div className="flex flex-col items-center gap-4">
                             <div className="loading-spinner w-8 h-8" />
                             <p className="text-sm text-text-tertiary">Loading...</p>
                         </div>
                     </div>
-                ) : activeTab?.url === 'poseidon://newtab' ? (
+                ) : isHomePage ? (
+                    /* Home Page - shown when on poseidon://newtab */
                     <HomePage />
-                ) : null}
+                ) : (
+                    /* Webview Container - renders web content */
+                    <div className="absolute inset-0">
+                        {tabs.map(tab => {
+                            const isInternal = tab.url.startsWith('poseidon://');
+                            if (isInternal) return null;
+
+                            return (
+                                <webview
+                                    key={tab.id}
+                                    ref={getWebviewRef(tab.id)}
+                                    src={tab.url}
+                                    className={cn(
+                                        "absolute inset-0 w-full h-full",
+                                        tab.id !== activeTabId && "hidden"
+                                    )}
+                                    // @ts-ignore
+                                    allowpopups="true"
+                                />
+                            );
+                        })}
+                    </div>
+                )}
             </main>
         </div>
     );
