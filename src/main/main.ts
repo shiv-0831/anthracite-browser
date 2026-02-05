@@ -352,19 +352,35 @@ async function initAdBlocker(): Promise<void> {
 function toggleAdBlocker(enabled: boolean): void {
     adBlockEnabled = enabled
     if (blocker) {
-        // Toggle on default session
-        if (enabled) {
-            safeEnableBlocking(session.defaultSession)
-        } else {
-            blocker.disableBlockingInSession(session.defaultSession)
-        }
-
         // Toggle on all tab sessions
+        // We iterate tabs, but they share the same 'persist:poseidon' session.
+        // So we really just need to toggle it on that session once.
+        // Accessing via the first available tab or constructing the session is fine.
+
+        // However, since we might have multiple windows/views, iterating is safer to catch all contentSessions.
+        // But we must guard against "disable on not enabled" or "enable on enabled".
+
+        const sessionsProcessed = new Set<string>()
+
         tabs.forEach(tab => {
+            const sess = tab.view.webContents.session
+            // @ts-ignore - accessing internal id if available, or just use object reference
+            // Actually, we can just check isBlockingEnabled
+
             if (enabled) {
-                safeEnableBlocking(tab.view.webContents.session)
+                if (!blocker!.isBlockingEnabled(sess)) {
+                    try {
+                        safeEnableBlocking(sess)
+                    } catch (e) { console.error('Error enabling adblock:', e) }
+                }
             } else {
-                blocker!.disableBlockingInSession(tab.view.webContents.session)
+                if (blocker!.isBlockingEnabled(sess)) {
+                    try {
+                        blocker!.disableBlockingInSession(sess)
+                    } catch (e) {
+                        // Ignore "not enabled" error if race condition
+                    }
+                }
             }
         })
     }
@@ -653,13 +669,7 @@ function createWindow(): void {
             }
         )
 
-        // Block third-party cookies
-        webContents.session.cookies.on('changed', (_, cookie, cause, removed) => {
-            // Log for debugging
-            if (!removed && cookie.domain && !cookie.domain.startsWith('.')) {
-                console.log(`Cookie set: ${cookie.name} from ${cookie.domain}`)
-            }
-        })
+        // Cookie listener removed to prevent MaxListenersExceededWarning on shared session
 
         // Aggressive Popup Blocking
         webContents.setWindowOpenHandler((details) => {
