@@ -81,7 +81,12 @@ contextBridge.exposeInMainWorld('electron', {
             ipcRenderer.on('ad-blocked', subscription)
             return () => ipcRenderer.removeListener('ad-blocked', subscription)
         },
-        onStatusChange: (callback: (data: { enabled: boolean; count: number }) => void) => {
+        onHttpsUpgrade: (callback: (data: { count: number }) => void) => {
+            const subscription = (_event: any, data: any) => callback(data)
+            ipcRenderer.on('https-upgraded', subscription)
+            return () => ipcRenderer.removeListener('https-upgraded', subscription)
+        },
+        onStatusChange: (callback: (data: { enabled: boolean; blockedCount: number; httpsUpgradeCount: number }) => void) => {
             const subscription = (_event: any, data: any) => callback(data)
             ipcRenderer.on('ad-block-status', subscription)
             return () => ipcRenderer.removeListener('ad-block-status', subscription)
@@ -126,10 +131,11 @@ declare global {
             }
             adBlock: {
                 toggle: (enabled: boolean) => Promise<{ enabled: boolean }>
-                getStatus: () => Promise<{ enabled: boolean; count: number }>
-                resetCount: () => Promise<{ count: number }>
+                getStatus: () => Promise<{ enabled: boolean; blockedCount: number; httpsUpgradeCount: number }>
+                resetCount: () => Promise<{ blockedCount: number; httpsUpgradeCount: number }>
                 onBlocked: (callback: (data: { count: number; url?: string }) => void) => () => void
-                onStatusChange: (callback: (data: { enabled: boolean; count: number }) => void) => () => void
+                onHttpsUpgrade: (callback: (data: { count: number }) => void) => () => void
+                onStatusChange: (callback: (data: { enabled: boolean; blockedCount: number; httpsUpgradeCount: number }) => void) => () => void
             }
             sidebar: {
                 setOpen: (isOpen: boolean) => Promise<void>

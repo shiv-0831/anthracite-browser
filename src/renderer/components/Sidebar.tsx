@@ -33,6 +33,7 @@ export function Sidebar({ className }: SidebarProps) {
     const [isPinned, setIsPinned] = useState(false);
     const [adBlockEnabled, setAdBlockEnabled] = useState(true);
     const [blockedCount, setBlockedCount] = useState(0);
+    const [httpsUpgradeCount, setHttpsUpgradeCount] = useState(0);
     const [tabs, setTabs] = useState<Tab[]>([]);
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
     const sidebarRef = useRef<HTMLDivElement>(null);
@@ -55,22 +56,29 @@ export function Sidebar({ className }: SidebarProps) {
             // Ad-block status
             window.electron.adBlock.getStatus().then(status => {
                 setAdBlockEnabled(status.enabled);
-                setBlockedCount(status.count);
+                setBlockedCount(status.blockedCount);
+                setHttpsUpgradeCount(status.httpsUpgradeCount);
             });
 
             const unsubscribeBlocked = window.electron.adBlock.onBlocked(data => {
                 setBlockedCount(data.count);
             });
 
+            const unsubscribeHttpsUpgrade = window.electron.adBlock.onHttpsUpgrade(data => {
+                setHttpsUpgradeCount(data.count);
+            });
+
             const unsubscribeAdStatus = window.electron.adBlock.onStatusChange(data => {
                 setAdBlockEnabled(data.enabled);
-                setBlockedCount(data.count);
+                setBlockedCount(data.blockedCount);
+                setHttpsUpgradeCount(data.httpsUpgradeCount);
             });
 
             return () => {
                 unsubscribeTabs();
                 unsubscribeActive();
                 unsubscribeBlocked();
+                unsubscribeHttpsUpgrade();
                 unsubscribeAdStatus();
             };
         }
@@ -298,9 +306,9 @@ export function Sidebar({ className }: SidebarProps) {
                     </section>
                 </nav>
 
-                {/* Footer */}
-                <footer className="p-3 border-t border-border/40 space-y-1">
-                    {/* Ad Blocker */}
+                {/* Footer - Shields */}
+                <footer className="p-3 border-t border-border/40 space-y-2">
+                    {/* Shields Header */}
                     <button
                         onClick={handleToggleAdBlock}
                         className={cn(
@@ -315,13 +323,32 @@ export function Sidebar({ className }: SidebarProps) {
                         ) : (
                             <ShieldOff className="h-[18px] w-[18px] shrink-0" />
                         )}
-                        <span>{adBlockEnabled ? "Protected" : "Unprotected"}</span>
-                        {adBlockEnabled && blockedCount > 0 && (
-                            <span className="ml-auto badge bg-success/10 text-success text-[10px]">
-                                {blockedCount > 999 ? '999+' : blockedCount}
-                            </span>
-                        )}
+                        <span className="font-semibold">{adBlockEnabled ? "Shields UP" : "Shields DOWN"}</span>
+                        <span className={cn(
+                            "ml-auto text-[10px] px-1.5 py-0.5 rounded-md font-medium",
+                            adBlockEnabled ? "bg-success/10 text-success" : "bg-surface-tertiary text-text-tertiary"
+                        )}>
+                            {adBlockEnabled ? "ON" : "OFF"}
+                        </span>
                     </button>
+
+                    {/* Stats Breakdown (only when enabled) */}
+                    {adBlockEnabled && (blockedCount > 0 || httpsUpgradeCount > 0) && (
+                        <div className="px-3 py-2 rounded-lg bg-surface-tertiary/50 space-y-1.5">
+                            {blockedCount > 0 && (
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-text-secondary">Ads & Trackers blocked</span>
+                                    <span className="font-medium text-text-primary">{blockedCount.toLocaleString()}</span>
+                                </div>
+                            )}
+                            {httpsUpgradeCount > 0 && (
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-text-secondary">HTTPS upgrades</span>
+                                    <span className="font-medium text-brand">{httpsUpgradeCount.toLocaleString()}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Settings */}
                     <button className="flex items-center w-full gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-all duration-200">

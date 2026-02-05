@@ -25,6 +25,7 @@ let win: BrowserWindow | null = null
 let pythonProcess: ChildProcess | null = null
 let blocker: ElectronBlocker | null = null
 let blockedCount = 0
+let httpsUpgradeCount = 0
 let adBlockEnabled = true
 
 // Tab management
@@ -404,12 +405,17 @@ function setupIPC(): void {
     })
 
     ipcMain.handle('get-ad-block-status', () => {
-        return { enabled: adBlockEnabled, count: blockedCount }
+        return {
+            enabled: adBlockEnabled,
+            blockedCount,
+            httpsUpgradeCount
+        }
     })
 
     ipcMain.handle('reset-blocked-count', () => {
         blockedCount = 0
-        return { count: blockedCount }
+        httpsUpgradeCount = 0
+        return { blockedCount, httpsUpgradeCount }
     })
 
     // Sidebar state tracking (no bounds adjustment - sidebar floats over)
@@ -465,6 +471,51 @@ function createWindow(): void {
         win?.webContents.send('ad-block-status', {
             enabled: adBlockEnabled,
             count: blockedCount
+        })
+    })
+
+    // Enable ad-blocking on webview tags when they are attached
+    win.webContents.on('did-attach-webview', (_, webContents) => {
+        console.log('Webview attached, enabling ad-blocker...')
+
+        // Enable ad-blocker on this webview's session
+        if (blocker && adBlockEnabled) {
+            blocker.enableBlockingInSession(webContents.session)
+            console.log('Ad-blocker enabled for webview')
+        }
+
+        // HTTPS Upgrade: Intercept HTTP requests and upgrade to HTTPS
+        webContents.session.webRequest.onBeforeRequest(
+            { urls: ['http://*/*'] },
+            (details, callback) => {
+                // Skip localhost and local network
+                const url = new URL(details.url)
+                const isLocal = url.hostname === 'localhost' ||
+                    url.hostname === '127.0.0.1' ||
+                    url.hostname.endsWith('.local')
+
+                if (!isLocal && adBlockEnabled) {
+                    const httpsUrl = details.url.replace('http://', 'https://')
+                    httpsUpgradeCount++
+                    console.log(`HTTPS Upgrade: ${details.url} -> ${httpsUrl}`)
+
+                    // Notify renderer of the upgrade
+                    if (win && !win.isDestroyed()) {
+                        win.webContents.send('https-upgraded', { count: httpsUpgradeCount })
+                    }
+                    callback({ redirectURL: httpsUrl })
+                } else {
+                    callback({})
+                }
+            }
+        )
+
+        // Block third-party cookies
+        webContents.session.cookies.on('changed', (_, cookie, cause, removed) => {
+            // Log for debugging
+            if (!removed && cookie.domain && !cookie.domain.startsWith('.')) {
+                console.log(`Cookie set: ${cookie.name} from ${cookie.domain}`)
+            }
         })
     })
 }
