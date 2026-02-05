@@ -160,6 +160,7 @@ function App() {
                                     ref={getWebviewRef(tab.id)}
                                     src={tab.url}
                                     preload={preloadPath}
+                                    partition="persist:poseidon"
                                     className={cn(
                                         "absolute inset-0 w-full h-full",
                                         tab.id !== activeTabId && "hidden"

@@ -105,9 +105,14 @@ function createTab(url: string = 'poseidon://newtab'): Tab {
     })
 
     // Enable ad-blocker on this view
+    // REMOVED: conflicting with webview session ad-blocker. 
+    // We only enable it on the actual webview session (did-attach-webview) to avoid 
+    // "Attempted to register a second handler" crash in electron-ad-blocker.
+    /*
     if (blocker && adBlockEnabled) {
         safeEnableBlocking(view.webContents.session)
     }
+    */
 
     const tab: Tab = {
         id,
@@ -331,9 +336,12 @@ async function initAdBlocker(): Promise<void> {
         })
 
         // Enable on default session
+        // REMOVED: conflicting with webview session. We prioritizing the webview session.
+        /*
         if (adBlockEnabled) {
             safeEnableBlocking(session.defaultSession)
         }
+        */
 
         console.log('Ad blocker initialized')
     } catch (error) {
@@ -607,9 +615,16 @@ function createWindow(): void {
         console.log('Webview attached, enabling ad-blocker...')
 
         // Enable ad-blocker on this webview's session
-        if (blocker && adBlockEnabled) {
-            safeEnableBlocking(webContents.session)
-            console.log('Ad-blocker enabled for webview')
+        if (blocker && adBlockEnabled && !blocker.isBlockingEnabled(webContents.session)) {
+            try {
+                safeEnableBlocking(webContents.session)
+                console.log('Ad-blocker enabled for webview')
+            } catch (err) {
+                console.error('Failed to enable ad-blocker for webview session:', err)
+                // Fallback: Ensure network filters are applied even if IPC registration failed
+                // checks if listeners are missing and adds them manually if needed could go here
+                // but restricting to single session usually solves the root cause.
+            }
         }
 
         // HTTPS Upgrade: Intercept HTTP requests and upgrade to HTTPS

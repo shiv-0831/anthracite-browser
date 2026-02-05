@@ -229,6 +229,14 @@
             "priority": "high",
             "context": "Block popups and new tabs on streaming sites (football matches) using ad blocker engine logic. Similar to Brave's aggressive blocking. Intercepts window.open via setWindowOpenHandler.",
             "created_at": "2024-05-22T14:00:00.000000"
+        },
+        {
+            "id": "12",
+            "title": "Fix YouTube Reload Loop & Stabilize Ad Blocker",
+            "status": "completed",
+            "priority": "high",
+            "context": "Video reload loop caused by duplicate IPC handler registration crashing the app when opening tabs/switching focus. Fixed by sharing webview session (partition) and checking initialization status. Restricted ad blocker to single session to prevent global IPC conflicts.",
+            "created_at": "2024-05-22T15:00:00.000000"
         }
     ]
 }
