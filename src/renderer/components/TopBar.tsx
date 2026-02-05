@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '../lib/utils';
 import {
     ArrowLeft,
@@ -10,6 +10,8 @@ import {
     Sparkles,
     Globe,
     Loader2,
+    History,
+    Search,
 } from 'lucide-react';
 
 interface TopBarProps {
@@ -26,13 +28,35 @@ interface ActiveTab {
     canGoForward: boolean;
 }
 
+interface Suggestion {
+    type: 'history' | 'search';
+    url?: string;
+    title: string;
+    favicon?: string;
+    visitCount?: number;
+}
+
 export function TopBar({ className }: TopBarProps) {
     const [activeTab, setActiveTab] = useState<ActiveTab | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [isAIProcessing, setIsAIProcessing] = useState(false);
+
+    // Autocomplete state
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
     const inputRef = useRef<HTMLInputElement>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<NodeJS.Timeout>();
+    const activeTabIdRef = useRef<string | null>(null);
+
+    // Keep ref in sync with activeTab
+    useEffect(() => {
+        activeTabIdRef.current = activeTab?.id || null;
+    }, [activeTab]);
 
     // Subscribe to active tab changes
     useEffect(() => {
@@ -40,6 +64,7 @@ export function TopBar({ className }: TopBarProps) {
             // Get initial active tab
             window.electron.tabs.getActive().then(tab => {
                 setActiveTab(tab);
+                activeTabIdRef.current = tab?.id || null;
                 // Don't show internal URLs in the search bar
                 const isInternalUrl = tab?.url.startsWith('poseidon://') || tab?.url.startsWith('about:');
                 if (tab && !isInternalUrl) {
@@ -50,6 +75,7 @@ export function TopBar({ className }: TopBarProps) {
             // Listen for active tab changes
             const unsubscribe = window.electron.tabs.onActiveTabChanged((tab) => {
                 setActiveTab(tab);
+                activeTabIdRef.current = tab?.id || null;
                 const isInternalUrl = tab?.url.startsWith('poseidon://') || tab?.url.startsWith('about:');
                 if (tab && !isEditing && !isInternalUrl) {
                     setInputValue(tab.url);
@@ -58,15 +84,29 @@ export function TopBar({ className }: TopBarProps) {
                 }
             });
 
-            // Listen for tab updates (loading state, title, etc.)
+            // Listen for tab updates (loading state, URL, title, etc.)
             const unsubscribeUpdate = window.electron.tabs.onTabUpdated((tab) => {
-                if (activeTab && tab.id === activeTab.id) {
+                console.log('[TopBar] onTabUpdated received:', { tabId: tab.id, url: tab.url, activeTabId: activeTabIdRef.current });
+
+                // Use ref to get current activeTabId to avoid stale closure
+                if (activeTabIdRef.current && tab.id === activeTabIdRef.current) {
+                    console.log('[TopBar] Updating active tab URL to:', tab.url);
                     setActiveTab(prev => prev ? { ...prev, ...tab } : null);
-                    // Don't show internal URLs in the search bar
+                    // Always update URL when navigation happens (unless editing)
                     const isInternalUrl = tab.url.startsWith('poseidon://') || tab.url.startsWith('about:');
-                    if (!isEditing && !isInternalUrl) {
-                        setInputValue(tab.url);
-                    } else if (isInternalUrl) {
+                    if (!isInternalUrl) {
+                        // Use functional update to check isEditing state
+                        setInputValue(prevInput => {
+                            // Only update if not currently editing
+                            const inputEl = inputRef.current;
+                            const isFocused = inputEl === document.activeElement;
+                            console.log('[TopBar] Input focused?', isFocused, 'Setting URL:', isFocused ? 'skipped' : tab.url);
+                            if (!isFocused) {
+                                return tab.url;
+                            }
+                            return prevInput;
+                        });
+                    } else {
                         setInputValue('');
                     }
                 }
@@ -77,17 +117,119 @@ export function TopBar({ className }: TopBarProps) {
                 unsubscribeUpdate();
             };
         }
-    }, [isEditing]);
+    }, []); // Remove isEditing dependency to avoid recreating listeners
+
+    // Fetch suggestions when input changes
+    const fetchSuggestions = useCallback(async (query: string) => {
+        if (!query || query.length < 1) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        const results: Suggestion[] = [];
+
+        // Fetch from history
+        try {
+            if (window.electron?.history) {
+                const historyResults = await window.electron.history.search(query, 5);
+                historyResults.forEach((entry: any) => {
+                    results.push({
+                        type: 'history',
+                        url: entry.url,
+                        title: entry.title || entry.url,
+                        favicon: entry.favicon,
+                        visitCount: entry.visitCount,
+                    });
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch history:', err);
+        }
+
+        // Fetch Google search suggestions via IPC (avoids CORS)
+        try {
+            if (window.electron?.searchSuggestions) {
+                const searchSuggestions = await window.electron.searchSuggestions(query);
+
+                // Add up to 4 search suggestions
+                searchSuggestions.slice(0, 4).forEach((term: string) => {
+                    // Don't duplicate if already in history results
+                    if (!results.some(r => r.title.toLowerCase() === term.toLowerCase())) {
+                        results.push({
+                            type: 'search',
+                            title: term,
+                        });
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch search suggestions:', err);
+        }
+
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+        setSelectedIndex(-1);
+    }, []);
+
+    // Debounced input handler
+    const handleInputChange = (value: string) => {
+        setInputValue(value);
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            fetchSuggestions(value);
+        }, 100); // Fast debounce for responsive feel
+    };
 
     const handleNavigate = (e: React.FormEvent) => {
         e.preventDefault();
         if (inputValue.trim() && window.electron?.navigation) {
-            // Always perform a Google search from the top bar
-            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(inputValue.trim())}`;
-            window.electron.navigation.navigate(searchUrl);
+            setShowSuggestions(false);
+
+            const input = inputValue.trim();
+
+            // Check if it looks like a URL (has protocol or looks like domain.tld)
+            const hasProtocol = input.startsWith('http://') || input.startsWith('https://');
+            const looksLikeUrl = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(input);
+
+            let navigateUrl: string;
+            if (hasProtocol) {
+                // Already has protocol - use as-is
+                navigateUrl = input;
+            } else if (looksLikeUrl) {
+                // Looks like a domain (e.g., "youtube.com", "github.io") - add https
+                navigateUrl = `https://${input}`;
+            } else {
+                // Everything else is a search query
+                navigateUrl = `https://www.google.com/search?q=${encodeURIComponent(input)}`;
+            }
+
+            window.electron.navigation.navigate(navigateUrl);
             setIsEditing(false);
             inputRef.current?.blur();
         }
+    };
+
+    const handleSelectSuggestion = (suggestion: Suggestion) => {
+        setShowSuggestions(false);
+
+        if (suggestion.type === 'history' && suggestion.url) {
+            // Navigate directly to URL from history
+            setInputValue(suggestion.url);
+            window.electron?.navigation.navigate(suggestion.url);
+        } else {
+            // Search suggestion - always perform Google search
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(suggestion.title)}`;
+            setInputValue(suggestion.title);
+            window.electron?.navigation.navigate(searchUrl);
+        }
+
+        setIsEditing(false);
+        inputRef.current?.blur();
     };
 
     const handleGoBack = () => {
@@ -136,20 +278,48 @@ export function TopBar({ className }: TopBarProps) {
         } else {
             setTimeout(() => inputRef.current?.select(), 0);
         }
-    };
-
-    const handleBlur = () => {
-        setIsFocused(false);
-        setIsEditing(false);
-        // Reset to current URL if not submitted
-        if (activeTab) {
-            setInputValue(activeTab.url);
+        // Fetch suggestions for current input
+        if (inputValue) {
+            fetchSuggestions(inputValue);
         }
     };
 
+    const handleBlur = () => {
+        // Delay to allow clicking on suggestions
+        setTimeout(() => {
+            setIsFocused(false);
+            setIsEditing(false);
+            setShowSuggestions(false);
+            // Reset to current URL if not submitted
+            if (activeTab && !activeTab.url.startsWith('poseidon://')) {
+                setInputValue(activeTab.url);
+            }
+        }, 200);
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (showSuggestions && suggestions.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedIndex((prev) => Math.max(prev - 1, -1));
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                handleSelectSuggestion(suggestions[selectedIndex]);
+                return;
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setShowSuggestions(false);
+                setSelectedIndex(-1);
+                return;
+            }
+        }
+
         if (e.key === 'Escape') {
             setIsEditing(false);
+            setShowSuggestions(false);
             if (activeTab) {
                 setInputValue(activeTab.url);
             }
@@ -225,7 +395,7 @@ export function TopBar({ className }: TopBarProps) {
             {/* URL / Search Bar */}
             <form
                 onSubmit={handleNavigate}
-                className="flex-1 max-w-3xl mx-auto"
+                className="flex-1 max-w-3xl mx-auto relative"
                 style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
                 <div
@@ -235,7 +405,8 @@ export function TopBar({ className }: TopBarProps) {
                         "transition-all duration-200",
                         isFocused
                             ? "border-brand ring-2 ring-brand/10 bg-white"
-                            : "border-border/60 hover:border-border-strong"
+                            : "border-border/60 hover:border-border-strong",
+                        showSuggestions && "rounded-b-none"
                     )}
                 >
                     {/* Icon */}
@@ -256,7 +427,7 @@ export function TopBar({ className }: TopBarProps) {
                         ref={inputRef}
                         type="text"
                         value={isEditing ? inputValue : (activeTab?.url === 'poseidon://newtab' ? '' : getDomain(displayUrl))}
-                        onChange={(e) => setInputValue(e.target.value)}
+                        onChange={(e) => handleInputChange(e.target.value)}
                         onFocus={handleFocus}
                         onBlur={handleBlur}
                         onKeyDown={handleKeyDown}
@@ -294,6 +465,67 @@ export function TopBar({ className }: TopBarProps) {
                         </button>
                     </div>
                 </div>
+
+                {/* Autocomplete Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                    <div
+                        ref={suggestionsRef}
+                        className="absolute z-[9999] w-full bg-white border border-t-0 border-border/60 rounded-b-xl shadow-lg overflow-hidden"
+                    >
+                        {suggestions.map((suggestion, index) => (
+                            <button
+                                key={`${suggestion.type}-${suggestion.url || suggestion.title}-${index}`}
+                                type="button"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); // Prevent blur
+                                    handleSelectSuggestion(suggestion);
+                                }}
+                                className={cn(
+                                    "flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors",
+                                    "hover:bg-surface-secondary",
+                                    index === selectedIndex && "bg-surface-secondary"
+                                )}
+                            >
+                                {/* Icon */}
+                                <div className="flex items-center justify-center h-7 w-7 rounded-md bg-surface-tertiary shrink-0">
+                                    {suggestion.type === 'history' && suggestion.favicon ? (
+                                        <img
+                                            src={suggestion.favicon}
+                                            alt=""
+                                            className="h-4 w-4 rounded"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                            }}
+                                        />
+                                    ) : suggestion.type === 'history' ? (
+                                        <History className="h-3.5 w-3.5 text-text-tertiary" />
+                                    ) : (
+                                        <Search className="h-3.5 w-3.5 text-text-tertiary" />
+                                    )}
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm text-text-primary truncate">
+                                        {suggestion.title}
+                                    </div>
+                                    {suggestion.type === 'history' && suggestion.url && (
+                                        <div className="text-xs text-text-tertiary truncate">
+                                            {suggestion.url}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Type Badge */}
+                                {suggestion.type === 'search' && (
+                                    <span className="text-[10px] text-brand bg-brand/10 px-1.5 py-0.5 rounded shrink-0">
+                                        Search
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </form>
 
             {/* Right Spacer */}

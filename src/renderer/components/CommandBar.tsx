@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '../lib/utils';
 import {
     Sparkles,
@@ -8,12 +8,23 @@ import {
     Mic,
     Paperclip,
     ChevronDown,
+    Globe,
+    History,
+    Search,
 } from 'lucide-react';
 
 interface CommandBarProps {
     onRun: (instruction: string) => void;
     isRunning: boolean;
     status?: 'idle' | 'thinking' | 'running' | 'done' | 'error';
+}
+
+interface Suggestion {
+    type: 'history' | 'search';
+    url?: string;
+    title: string;
+    favicon?: string;
+    visitCount?: number;
 }
 
 const placeholders = [
@@ -28,7 +39,12 @@ export function CommandBar({ onRun, isRunning, status = 'idle' }: CommandBarProp
     const [input, setInput] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<NodeJS.Timeout>();
 
     // Rotate placeholders
     useEffect(() => {
@@ -46,18 +62,126 @@ export function CommandBar({ onRun, isRunning, status = 'idle' }: CommandBarProp
         }
     }, [input]);
 
+    // Fetch suggestions when input changes
+    const fetchSuggestions = useCallback(async (query: string) => {
+        if (!query || query.length < 1) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        const results: Suggestion[] = [];
+
+        // Fetch from history
+        try {
+            if (window.electron?.history) {
+                const historyResults = await window.electron.history.search(query, 5);
+                historyResults.forEach((entry: any) => {
+                    results.push({
+                        type: 'history',
+                        url: entry.url,
+                        title: entry.title || entry.url,
+                        favicon: entry.favicon,
+                        visitCount: entry.visitCount,
+                    });
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch history:', err);
+        }
+
+        // Fetch Google search suggestions via IPC (avoids CORS)
+        try {
+            if (window.electron?.searchSuggestions) {
+                const searchSuggestions = await window.electron.searchSuggestions(query);
+
+                // Add up to 3 search suggestions
+                searchSuggestions.slice(0, 3).forEach((term: string) => {
+                    // Don't duplicate if already in history results
+                    if (!results.some(r => r.title.toLowerCase() === term.toLowerCase())) {
+                        results.push({
+                            type: 'search',
+                            title: term,
+                        });
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch search suggestions:', err);
+        }
+
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+        setSelectedIndex(-1);
+    }, []);
+
+    // Debounced input handler
+    const handleInputChange = (value: string) => {
+        setInput(value);
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            fetchSuggestions(value);
+        }, 150);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (input.trim() && !isRunning) {
+            setShowSuggestions(false);
             onRun(input);
         }
     };
 
+    const handleSelectSuggestion = (suggestion: Suggestion) => {
+        if (suggestion.type === 'history' && suggestion.url) {
+            // Navigate directly to URL from history
+            setInput(suggestion.url);
+            setShowSuggestions(false);
+            onRun(suggestion.url);
+        } else {
+            // Search suggestion - always perform Google search
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(suggestion.title)}`;
+            setInput(suggestion.title);
+            setShowSuggestions(false);
+            onRun(searchUrl);
+        }
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (showSuggestions && suggestions.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedIndex((prev) => Math.max(prev - 1, -1));
+            } else if (e.key === 'Enter' && !e.shiftKey && selectedIndex >= 0) {
+                e.preventDefault();
+                handleSelectSuggestion(suggestions[selectedIndex]);
+                return;
+            } else if (e.key === 'Escape') {
+                setShowSuggestions(false);
+                setSelectedIndex(-1);
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSubmit(e);
         }
+    };
+
+    const handleBlur = () => {
+        // Delay hiding suggestions to allow clicking on them
+        setTimeout(() => {
+            setIsFocused(false);
+            setShowSuggestions(false);
+        }, 200);
     };
 
     const getStatusConfig = () => {
@@ -121,7 +245,8 @@ export function CommandBar({ onRun, isRunning, status = 'idle' }: CommandBarProp
                     className={cn(
                         "relative glass-elevated overflow-hidden transition-all duration-300",
                         isFocused ? "shadow-large ring-1 ring-brand/20" : "shadow-medium",
-                        isRunning && "ring-1 ring-brand/30"
+                        isRunning && "ring-1 ring-brand/30",
+                        showSuggestions && "rounded-b-none"
                     )}
                 >
                     {/* Top Section - Input */}
@@ -144,9 +269,12 @@ export function CommandBar({ onRun, isRunning, status = 'idle' }: CommandBarProp
                             <textarea
                                 ref={inputRef}
                                 value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onFocus={() => setIsFocused(true)}
-                                onBlur={() => setIsFocused(false)}
+                                onChange={(e) => handleInputChange(e.target.value)}
+                                onFocus={() => {
+                                    setIsFocused(true);
+                                    if (suggestions.length > 0) setShowSuggestions(true);
+                                }}
+                                onBlur={handleBlur}
                                 onKeyDown={handleKeyDown}
                                 placeholder={placeholders[placeholderIndex]}
                                 disabled={isRunning}
@@ -230,6 +358,69 @@ export function CommandBar({ onRun, isRunning, status = 'idle' }: CommandBarProp
                         </div>
                     </div>
                 </div>
+
+                {/* Autocomplete Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                    <div
+                        ref={suggestionsRef}
+                        className="absolute z-50 w-full bg-surface/95 backdrop-blur-xl border border-t-0 border-border/50 rounded-b-2xl shadow-large overflow-hidden"
+                    >
+                        {suggestions.map((suggestion, index) => (
+                            <button
+                                key={`${suggestion.type}-${suggestion.url || suggestion.title}`}
+                                type="button"
+                                onClick={() => handleSelectSuggestion(suggestion)}
+                                className={cn(
+                                    "flex items-center gap-3 w-full px-4 py-3 text-left transition-colors",
+                                    "hover:bg-surface-secondary/80",
+                                    index === selectedIndex && "bg-surface-secondary"
+                                )}
+                            >
+                                {/* Icon */}
+                                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-surface-tertiary shrink-0">
+                                    {suggestion.type === 'history' && suggestion.favicon ? (
+                                        <img
+                                            src={suggestion.favicon}
+                                            alt=""
+                                            className="h-4 w-4 rounded"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                            }}
+                                        />
+                                    ) : suggestion.type === 'history' ? (
+                                        <History className="h-4 w-4 text-text-tertiary" />
+                                    ) : (
+                                        <Search className="h-4 w-4 text-text-tertiary" />
+                                    )}
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium text-text-primary truncate">
+                                        {suggestion.title}
+                                    </div>
+                                    {suggestion.type === 'history' && suggestion.url && (
+                                        <div className="text-xs text-text-tertiary truncate">
+                                            {suggestion.url}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Badge */}
+                                {suggestion.type === 'history' && suggestion.visitCount && suggestion.visitCount > 1 && (
+                                    <span className="text-[10px] text-text-tertiary bg-surface-tertiary px-1.5 py-0.5 rounded">
+                                        {suggestion.visitCount} visits
+                                    </span>
+                                )}
+                                {suggestion.type === 'search' && (
+                                    <span className="text-[10px] text-brand bg-brand/10 px-1.5 py-0.5 rounded">
+                                        Search
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </form>
 
             {/* Hints */}
@@ -248,3 +439,4 @@ export function CommandBar({ onRun, isRunning, status = 'idle' }: CommandBarProp
         </div>
     );
 }
+

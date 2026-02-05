@@ -3,6 +3,15 @@ import path from 'node:path'
 import { spawn, ChildProcess } from 'node:child_process'
 import { ElectronBlocker } from '@ghostery/adblocker-electron'
 import fetch from 'cross-fetch'
+import {
+    addHistoryEntry,
+    updateHistoryEntry,
+    searchHistory,
+    getTopSites,
+    getRecentHistory,
+    clearHistory,
+    closeDatabase
+} from './history'
 
 // ============================================
 // Types
@@ -97,7 +106,7 @@ function createTab(url: string = 'poseidon://newtab'): Tab {
 
     // Enable ad-blocker on this view
     if (blocker && adBlockEnabled) {
-        blocker.enableBlockingInSession(view.webContents.session)
+        safeEnableBlocking(view.webContents.session)
     }
 
     const tab: Tab = {
@@ -120,25 +129,55 @@ function createTab(url: string = 'poseidon://newtab'): Tab {
         sendTabUpdate(tab)
     })
 
+    // Main navigation event - fires for full page loads
     view.webContents.on('did-navigate', (_, url) => {
+        console.log('[Nav] did-navigate:', url)
         tab.url = url
         sendTabUpdate(tab)
+        addHistoryEntry(url, tab.title, tab.favicon)
     })
 
+    // In-page navigation (hash changes, pushState)
     view.webContents.on('did-navigate-in-page', (_, url) => {
+        console.log('[Nav] did-navigate-in-page:', url)
         tab.url = url
         sendTabUpdate(tab)
+        addHistoryEntry(url, tab.title, tab.favicon)
+    })
+
+    // Frame navigation - catches navigations in sub-frames
+    view.webContents.on('did-frame-navigate', (_, url, httpResponseCode, httpStatusText, isMainFrame) => {
+        if (isMainFrame) {
+            console.log('[Nav] did-frame-navigate (main):', url)
+            tab.url = url
+            sendTabUpdate(tab)
+            addHistoryEntry(url, tab.title, tab.favicon)
+        }
+    })
+
+    // Also update URL after page finishes loading (fallback)
+    view.webContents.on('did-finish-load', () => {
+        const currentUrl = view.webContents.getURL()
+        console.log('[Nav] did-finish-load, URL:', currentUrl)
+        if (currentUrl && currentUrl !== tab.url) {
+            tab.url = currentUrl
+            sendTabUpdate(tab)
+        }
     })
 
     view.webContents.on('page-title-updated', (_, title) => {
         tab.title = title || 'Untitled'
         sendTabUpdate(tab)
+        // Update history with new title
+        updateHistoryEntry(tab.url, tab.title, tab.favicon)
     })
 
     view.webContents.on('page-favicon-updated', (_, favicons) => {
         if (favicons.length > 0) {
             tab.favicon = favicons[0]
             sendTabUpdate(tab)
+            // Update history with new favicon
+            updateHistoryEntry(tab.url, tab.title, tab.favicon)
         }
     })
 
@@ -254,6 +293,23 @@ function sendActiveTabUpdate(): void {
 // Ad Blocker
 // ============================================
 
+// Helper to safely enable blocking (shims removed Electron APIs)
+function safeEnableBlocking(sess: Electron.Session) {
+    if (!sess || !blocker) return
+
+    // Shim registerPreloadScript if missing (Electron 20+)
+    // @ts-ignore
+    if (!sess.registerPreloadScript) {
+        // @ts-ignore
+        sess.registerPreloadScript = (_: any) => {
+            console.log('Shimmed registerPreloadScript - cosmetic filtering limited')
+            return () => { }
+        }
+    }
+
+    blocker.enableBlockingInSession(sess)
+}
+
 async function initAdBlocker(): Promise<void> {
     try {
         console.log('Initializing ad blocker...')
@@ -276,7 +332,7 @@ async function initAdBlocker(): Promise<void> {
 
         // Enable on default session
         if (adBlockEnabled) {
-            blocker.enableBlockingInSession(session.defaultSession)
+            safeEnableBlocking(session.defaultSession)
         }
 
         console.log('Ad blocker initialized')
@@ -290,7 +346,7 @@ function toggleAdBlocker(enabled: boolean): void {
     if (blocker) {
         // Toggle on default session
         if (enabled) {
-            blocker.enableBlockingInSession(session.defaultSession)
+            safeEnableBlocking(session.defaultSession)
         } else {
             blocker.disableBlockingInSession(session.defaultSession)
         }
@@ -298,7 +354,7 @@ function toggleAdBlocker(enabled: boolean): void {
         // Toggle on all tab sessions
         tabs.forEach(tab => {
             if (enabled) {
-                blocker!.enableBlockingInSession(tab.view.webContents.session)
+                safeEnableBlocking(tab.view.webContents.session)
             } else {
                 blocker!.disableBlockingInSession(tab.view.webContents.session)
             }
@@ -352,6 +408,32 @@ function setupIPC(): void {
             canGoBack: tab.view.webContents.canGoBack(),
             canGoForward: tab.view.webContents.canGoForward()
         }
+    })
+
+    ipcMain.handle('update-tab-state', (_, tabId: string, data: Partial<Tab>) => {
+        const tab = tabs.get(tabId)
+        if (!tab) return { success: false }
+
+        // Update fields
+        if (data.url !== undefined) tab.url = data.url
+        if (data.title !== undefined) tab.title = data.title
+        if (data.favicon !== undefined) tab.favicon = data.favicon
+        if (data.isLoading !== undefined) tab.isLoading = data.isLoading
+
+        // Handle URL update - add to history
+        if (data.url) {
+            addHistoryEntry(data.url, tab.title, tab.favicon)
+        }
+
+        // Handle title/favicon update - update history
+        if (data.title || data.favicon) {
+            updateHistoryEntry(tab.url, tab.title, tab.favicon)
+        }
+
+        // Notify renderer
+        sendTabUpdate(tab)
+
+        return { success: true }
     })
 
     // Navigation
@@ -424,6 +506,41 @@ function setupIPC(): void {
         // Note: We don't resize BrowserView - the sidebar floats over the content
         // The 16px trigger zone is always visible for hover detection
     })
+
+    // History
+    ipcMain.handle('history-search', (_, query: string, limit?: number) => {
+        return searchHistory(query, limit || 10)
+    })
+
+    ipcMain.handle('history-top-sites', (_, limit?: number) => {
+        return getTopSites(limit || 8)
+    })
+
+    ipcMain.handle('history-recent', (_, limit?: number) => {
+        return getRecentHistory(limit || 20)
+    })
+
+    ipcMain.handle('history-clear', () => {
+        clearHistory()
+        return { success: true }
+    })
+
+    // Google search suggestions (proxy to avoid CORS in renderer)
+    ipcMain.handle('search-suggestions', async (_, query: string) => {
+        if (!query || query.length < 1) {
+            return []
+        }
+        try {
+            const response = await fetch(
+                `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`
+            )
+            const data = await response.json()
+            return data[1] as string[] // The suggestions array
+        } catch (err) {
+            console.error('Failed to fetch search suggestions:', err)
+            return []
+        }
+    })
 }
 
 // ============================================
@@ -480,7 +597,7 @@ function createWindow(): void {
 
         // Enable ad-blocker on this webview's session
         if (blocker && adBlockEnabled) {
-            blocker.enableBlockingInSession(webContents.session)
+            safeEnableBlocking(webContents.session)
             console.log('Ad-blocker enabled for webview')
         }
 
@@ -580,6 +697,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
     killPythonBackend()
+    closeDatabase()
 })
 
 app.on('activate', () => {

@@ -4,6 +4,7 @@
             "id": "1",
             "title": "Implement Vertical Sidebar UI (Arc-style)",
             "status": "completed",
+            "priority": "high",
             "context": "Create a collapsible sidebar in React. Move 'Command Bar' to be accessible via shortcut (Cmd+K) or persistent button. Use simple, elegant icons.",
             "created_at": "2024-05-22T10:00:00.000000"
         },
@@ -11,6 +12,7 @@
             "id": "2",
             "title": "Implement Core Web Browsing",
             "status": "completed",
+            "priority": "high",
             "context": "Implemented webview-based architecture for full CSS z-index layering support. Sidebar floats over web content with blur effect.",
             "created_at": "2024-05-22T10:00:30.000000",
             "subtasks": [
@@ -48,129 +50,169 @@
         },
         {
             "id": "3",
-            "title": "Integrate Native Ad-Blocker (Brave-like Shields)",
+            "title": "Brave-level Native Ad Blocker",
             "status": "completed",
-            "context": "Implemented Brave-like Shields with @ghostery/adblocker-electron on webview sessions. Includes HTTPS upgrades, blocked count tracking, and enhanced UI showing stats breakdown.",
+            "priority": "high",
+            "context": "Use @ghostery/adblocker-electron. Fixed Electron 20+ compatibility issues by shimming registerPreloadScript. Enabled on both main process and renderer <webview> sessions.",
             "created_at": "2024-05-22T10:01:00.000000",
             "subtasks": [
                 {
                     "id": "3.1",
-                    "title": "Install @ghostery/adblocker-electron package",
+                    "title": "Install and configure electron-ad-blocker",
                     "status": "completed"
                 },
                 {
                     "id": "3.2",
-                    "title": "Configure ElectronBlocker in main process",
+                    "title": "Load EasyList and other filter lists",
                     "status": "completed"
                 },
                 {
                     "id": "3.3",
-                    "title": "Enable ad-blocking on webview sessions",
-                    "status": "completed"
-                },
-                {
-                    "id": "3.4",
-                    "title": "Add HTTPS upgrade support",
-                    "status": "completed"
-                },
-                {
-                    "id": "3.5",
-                    "title": "Add Shields toggle in sidebar",
-                    "status": "completed"
-                },
-                {
-                    "id": "3.6",
-                    "title": "Show stats breakdown (blocked + HTTPS upgrades)",
+                    "title": "Fix registerPreloadScript compatibility issue",
                     "status": "completed"
                 }
             ]
         },
         {
             "id": "4",
-            "title": "Implement Captcha Bypass Integration",
-            "status": "todo",
-            "context": "Add settings UI to accept 2Captcha/CapSolver API keys. Middleware in Python backend to use these keys when 'browser-use' encounters a captcha.",
+            "title": "AI Agent Integration (browser-use)",
+            "status": "completed",
+            "priority": "high",
+            "context": "Python FastAPI backend using browser-use library for webpage automation. Agent can click, type, scroll, navigate.",
             "created_at": "2024-05-22T10:02:00.000000",
             "subtasks": [
                 {
                     "id": "4.1",
-                    "title": "Create settings modal/page component",
-                    "status": "todo"
+                    "title": "Set up Python backend with FastAPI",
+                    "status": "completed"
                 },
                 {
                     "id": "4.2",
-                    "title": "Add API key input fields for 2Captcha/CapSolver",
-                    "status": "todo"
+                    "title": "Integrate browser-use library",
+                    "status": "completed"
                 },
                 {
                     "id": "4.3",
-                    "title": "Store API keys securely (electron-store)",
-                    "status": "todo"
+                    "title": "Create /agent/run endpoint",
+                    "status": "completed"
                 },
                 {
                     "id": "4.4",
-                    "title": "Add captcha solver middleware in Python backend",
-                    "status": "todo"
+                    "title": "Connect frontend Command Bar to backend",
+                    "status": "completed"
                 }
             ]
         },
         {
             "id": "5",
-            "title": "Security & Privacy Hardening",
-            "status": "todo",
-            "context": "Audit Electron 'webPreferences' (ensure contextIsolation: true, nodeIntegration: false). Ensure Python backend binds only to 127.0.0.1.",
+            "title": "Beautiful Home Page (poseidon:// internal page)",
+            "status": "completed",
+            "priority": "medium",
+            "context": "Custom internal page with Command Bar, quick links, and recent sites. Handles poseidon://newtab URLs.",
             "created_at": "2024-05-22T10:03:00.000000",
             "subtasks": [
                 {
                     "id": "5.1",
-                    "title": "Audit webPreferences in BrowserWindow",
-                    "status": "todo"
+                    "title": "Create HomePage component with gradient background",
+                    "status": "completed"
                 },
                 {
                     "id": "5.2",
-                    "title": "Add CSP headers",
-                    "status": "todo"
+                    "title": "Implement poseidon:// URL scheme",
+                    "status": "completed"
                 },
                 {
                     "id": "5.3",
-                    "title": "Verify Python backend localhost binding",
-                    "status": "todo"
+                    "title": "Add quick links grid with favicons",
+                    "status": "completed"
                 },
                 {
                     "id": "5.4",
-                    "title": "Sanitize IPC communication",
-                    "status": "todo"
+                    "title": "Integrate Command Bar for search/AI",
+                    "status": "completed"
                 }
             ]
         },
         {
             "id": "6",
-            "title": "Optimize Agent Token Usage",
-            "status": "todo",
-            "context": "Review 'browser-use' system prompts. Ensure we are not sending unnecessary HTML data to the LLM to save user costs.",
-            "created_at": "2024-05-22T10:04:00.000000",
+            "title": "Smart Settings (poseidon://settings)",
+            "status": "pending",
+            "priority": "low",
+            "context": "Internal settings page for preferences, AI provider config, themes, privacy settings.",
+            "created_at": "2024-05-22T10:04:00.000000"
+        },
+        {
+            "id": "7",
+            "title": "URL Autocomplete with History & Suggestions",
+            "status": "completed",
+            "priority": "high",
+            "context": "JSON-based history storage with browser history and Google search suggestions. IPC handlers for search.",
+            "created_at": "2024-05-22T10:05:00.000000",
             "subtasks": [
                 {
-                    "id": "6.1",
-                    "title": "Analyze current token usage per request",
-                    "status": "todo"
+                    "id": "7.1",
+                    "title": "Implement JSON history storage (temporary)",
+                    "status": "completed"
                 },
                 {
-                    "id": "6.2",
-                    "title": "Implement HTML sanitization before LLM",
-                    "status": "todo"
+                    "id": "7.2",
+                    "title": "Store visited URLs with title, favicon, visit count, timestamp",
+                    "status": "completed"
                 },
                 {
-                    "id": "6.3",
-                    "title": "Add token counter display in UI",
-                    "status": "todo"
+                    "id": "7.3",
+                    "title": "Create IPC handlers for history search/autocomplete",
+                    "status": "completed"
                 },
                 {
-                    "id": "6.4",
-                    "title": "Optimize system prompts",
-                    "status": "todo"
+                    "id": "7.4",
+                    "title": "Add autocomplete dropdown to CommandBar and TopBar",
+                    "status": "completed"
+                },
+                {
+                    "id": "7.5",
+                    "title": "Add Google search suggestions via IPC (CORS bypass)",
+                    "status": "completed"
                 }
             ]
+        },
+        {
+            "id": "8",
+            "title": "Upgrade History to SQLite Database",
+            "status": "pending",
+            "priority": "low",
+            "context": "Replace JSON file storage with better-sqlite3 for production scalability. Current JSON implementation limited to 1000 entries. SQLite needed for millions of history entries with indexed search.",
+            "created_at": "2024-05-22T10:06:00.000000",
+            "subtasks": [
+                {
+                    "id": "8.1",
+                    "title": "Configure electron-rebuild for native modules",
+                    "status": "pending"
+                },
+                {
+                    "id": "8.2",
+                    "title": "Mark better-sqlite3 as external and copy .node binary",
+                    "status": "pending"
+                },
+                {
+                    "id": "8.3",
+                    "title": "Migrate history storage from JSON to SQLite",
+                    "status": "pending"
+                },
+                {
+                    "id": "8.4",
+                    "title": "Add database indexes for fast search",
+                    "status": "pending"
+                }
+            ]
+        },
+        {
+            "id": "9",
+            "title": "Fix URL Bar Not Updating on Navigation",
+            "status": "completed",
+            "priority": "high",
+            "context": "URL bar shows old URL (e.g., google.com) after clicking links to navigate to new pages. Fixed by syncing renderer <webview> state to main process via IPC.",
+            "created_at": "2024-05-22T10:07:00.000000"
         }
     ]
 }

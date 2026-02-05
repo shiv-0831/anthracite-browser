@@ -61,6 +61,45 @@ function App() {
         return (element: Electron.WebviewTag | null) => {
             if (element) {
                 webviewRefs.current.set(tabId, element);
+
+                // Attach event listeners to sync state with main process
+                const updateState = (data: Partial<Tab>) => {
+                    window.electron.tabs.update(tabId, data);
+                };
+
+                // Remove existing listeners if any (to prevent duplicates if ref is called again)
+                // Note: In React refs, if the element persists, ref isn't called again. 
+                // If it's recreated, it's a new element.
+                // We'll rely on the fact that these are new elements or we're overwriting.
+
+                element.addEventListener('did-navigate', (e: any) => {
+                    updateState({ url: e.url });
+                    console.log('[Webview] did-navigate', e.url);
+                });
+
+                element.addEventListener('did-navigate-in-page', (e: any) => {
+                    updateState({ url: e.url });
+                    console.log('[Webview] did-navigate-in-page', e.url);
+                });
+
+                element.addEventListener('page-title-updated', (e: any) => {
+                    updateState({ title: e.title });
+                });
+
+                element.addEventListener('page-favicon-updated', (e: any) => {
+                    if (e.favicons && e.favicons.length > 0) {
+                        updateState({ favicon: e.favicons[0] });
+                    }
+                });
+
+                element.addEventListener('did-start-loading', () => {
+                    updateState({ isLoading: true });
+                });
+
+                element.addEventListener('did-stop-loading', () => {
+                    updateState({ isLoading: false });
+                });
+
             } else {
                 webviewRefs.current.delete(tabId);
             }

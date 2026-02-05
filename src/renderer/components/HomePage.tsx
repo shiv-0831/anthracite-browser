@@ -12,13 +12,19 @@ export function HomePage({ className }: HomePageProps) {
     const [status, setStatus] = useState<'idle' | 'thinking' | 'running' | 'done' | 'error'>('idle');
 
     const handleRunAgent = async (instruction: string) => {
-        // Check if it looks like a URL or search term for navigation
-        const urlPattern = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/;
-        const isUrl = urlPattern.test(instruction.trim());
+        const input = instruction.trim();
 
-        if (isUrl || instruction.startsWith('http')) {
-            // Navigate directly
-            window.electron?.navigation.navigate(instruction.trim());
+        // Check if it looks like a URL (has protocol or looks like domain.tld)
+        const hasProtocol = input.startsWith('http://') || input.startsWith('https://');
+        const looksLikeUrl = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(input);
+
+        if (hasProtocol) {
+            // Already has protocol - navigate directly
+            window.electron?.navigation.navigate(input);
+            return;
+        } else if (looksLikeUrl) {
+            // Looks like a domain (e.g., "youtube.com") - add https and navigate
+            window.electron?.navigation.navigate(`https://${input}`);
             return;
         }
 

@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('electron', {
         switch: (tabId: string) => ipcRenderer.invoke('switch-tab', tabId),
         getAll: () => ipcRenderer.invoke('get-tabs'),
         getActive: () => ipcRenderer.invoke('get-active-tab'),
+        update: (tabId: string, data: Partial<TabInfo>) => ipcRenderer.invoke('update-tab-state', tabId, data),
 
         // Event listeners
         onTabsUpdated: (callback: (tabs: TabInfo[]) => void) => {
@@ -97,6 +98,17 @@ contextBridge.exposeInMainWorld('electron', {
     sidebar: {
         setOpen: (isOpen: boolean) => ipcRenderer.invoke('sidebar-set-open', isOpen),
     },
+
+    // History
+    history: {
+        search: (query: string, limit?: number) => ipcRenderer.invoke('history-search', query, limit),
+        topSites: (limit?: number) => ipcRenderer.invoke('history-top-sites', limit),
+        recent: (limit?: number) => ipcRenderer.invoke('history-recent', limit),
+        clear: () => ipcRenderer.invoke('history-clear'),
+    },
+
+    // Search suggestions (Google API via main process to avoid CORS)
+    searchSuggestions: (query: string) => ipcRenderer.invoke('search-suggestions', query),
 })
 
 // ============================================
@@ -118,6 +130,7 @@ declare global {
                 switch: (tabId: string) => Promise<{ success: boolean }>
                 getAll: () => Promise<TabInfo[]>
                 getActive: () => Promise<ActiveTabInfo | null>
+                update: (tabId: string, data: Partial<TabInfo>) => Promise<{ success: boolean }>
                 onTabsUpdated: (callback: (tabs: TabInfo[]) => void) => () => void
                 onTabUpdated: (callback: (tab: TabInfo) => void) => () => void
                 onActiveTabChanged: (callback: (tab: ActiveTabInfo | null) => void) => () => void
@@ -140,8 +153,24 @@ declare global {
             sidebar: {
                 setOpen: (isOpen: boolean) => Promise<void>
             }
+            history: {
+                search: (query: string, limit?: number) => Promise<HistoryEntry[]>
+                topSites: (limit?: number) => Promise<HistoryEntry[]>
+                recent: (limit?: number) => Promise<HistoryEntry[]>
+                clear: () => Promise<{ success: boolean }>
+            }
+            searchSuggestions: (query: string) => Promise<string[]>
         }
     }
+}
+
+interface HistoryEntry {
+    id: number
+    url: string
+    title: string
+    favicon: string
+    visitCount: number
+    lastVisited: number
 }
 
 export { }
