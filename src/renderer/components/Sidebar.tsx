@@ -48,6 +48,8 @@ interface SidebarProps {
     className?: string;
     isPinned: boolean;
     onPinnedChange: (pinned: boolean) => void;
+    tabs: Tab[];
+    activeTabId: string | null;
 }
 
 // ... existing interfaces ...
@@ -101,17 +103,13 @@ function LooseTabsDropZone({ looseTabs, activeRealmDocks, children }: LooseTabsD
     );
 }
 
-export function Sidebar({ className, isPinned, onPinnedChange }: SidebarProps) {
+export function Sidebar({ className, isPinned, onPinnedChange, tabs, activeTabId }: SidebarProps) {
     const [isVisible, setIsVisible] = useState(false);
 
     // Ad blocker state
     const [adBlockEnabled, setAdBlockEnabled] = useState(true);
     const [blockedCount, setBlockedCount] = useState(0);
     const [httpsUpgradeCount, setHttpsUpgradeCount] = useState(0);
-
-    // Tabs state
-    const [tabs, setTabs] = useState<Tab[]>([]);
-    const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
     // Realms & Docks state
     const [realms, setRealms] = useState<Realm[]>([]);
@@ -200,14 +198,6 @@ export function Sidebar({ className, isPinned, onPinnedChange }: SidebarProps) {
                 console.error('Failed to load sidebar state:', err);
             }
 
-            // Get tabs
-            const initialTabs = await window.electron.tabs.getAll();
-            setTabs(initialTabs);
-
-            // Get active tab
-            const activeTab = await window.electron.tabs.getActive();
-            if (activeTab) setActiveTabId(activeTab.id);
-
             // Ad-block status
             const status = await window.electron.adBlock.getStatus();
             setAdBlockEnabled(status.enabled);
@@ -219,8 +209,7 @@ export function Sidebar({ className, isPinned, onPinnedChange }: SidebarProps) {
 
         // Subscribe to tab updates
         const unsubscribeTabs = window.electron.tabs.onTabsUpdated((updatedTabs: Tab[]) => {
-            setTabs(updatedTabs);
-            // Also update organization from tabs data
+            // Update organization from tabs data
             const orgs: Record<string, TabOrganization> = {};
             updatedTabs.forEach((tab: Tab) => {
                 if (tab.realmId) {
@@ -234,9 +223,7 @@ export function Sidebar({ className, isPinned, onPinnedChange }: SidebarProps) {
             });
             setTabOrganizations(prev => ({ ...prev, ...orgs }));
         });
-        const unsubscribeActive = window.electron.tabs.onActiveTabChanged((tab: Tab | null) => {
-            if (tab) setActiveTabId(tab.id);
-        });
+        // Active tab subscription handled by parent
 
         // Ad-block subscriptions
         const unsubscribeBlocked = window.electron.adBlock.onBlocked(data => setBlockedCount(data.count));
@@ -300,7 +287,6 @@ export function Sidebar({ className, isPinned, onPinnedChange }: SidebarProps) {
 
         return () => {
             unsubscribeTabs();
-            unsubscribeActive();
             unsubscribeBlocked();
             unsubscribeHttpsUpgrade();
             unsubscribeAdStatus();

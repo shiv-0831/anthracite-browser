@@ -21,6 +21,12 @@ import type { Realm, ThemeColor } from '../../shared/types';
 interface TopBarProps {
     className?: string;
     isSidebarPinned?: boolean;
+    onBack?: () => void;
+    onForward?: () => void;
+    onReload?: () => void;
+    canGoBack?: boolean;
+    canGoForward?: boolean;
+    isLoading?: boolean;
 }
 
 // ... existing interfaces ...
@@ -85,7 +91,16 @@ const COLOR_BORDER_MAP: Record<ThemeColor, string> = {
     gray: 'border-gray-500/30',
 };
 
-export function TopBar({ className, isSidebarPinned }: TopBarProps) {
+export function TopBar({
+    className,
+    isSidebarPinned,
+    onBack,
+    onForward,
+    onReload,
+    canGoBack,
+    canGoForward,
+    isLoading
+}: TopBarProps) {
     const [activeTab, setActiveTab] = useState<ActiveTab | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [isFocused, setIsFocused] = useState(false);
@@ -618,6 +633,29 @@ export function TopBar({ className, isSidebarPinned }: TopBarProps) {
                         )}
                     />
 
+                    {/* Navigation Controls */}
+                    <div className="flex items-center gap-1 text-text-secondary no-drag-region">
+                        <button
+                            onClick={onBack}
+                            disabled={!canGoBack}
+                            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <button
+                            onClick={onForward}
+                            disabled={!canGoForward}
+                            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                            <ArrowRight size={18} />
+                        </button>
+                        <button
+                            onClick={onReload}
+                            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors"
+                        >
+                            {isLoading ? <X size={18} /> : <RotateCw size={18} />}
+                        </button>
+                    </div>
                     {/* AI Indicator */}
                     <div className="flex items-center gap-2 pr-3">
                         <div className="h-5 w-px bg-border" />
