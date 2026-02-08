@@ -1,4 +1,4 @@
-# Contributing to Poseidon 🔱
+# Contributing to Poseidon
 
 First off, thanks for taking the time to contribute! 🎉
 
