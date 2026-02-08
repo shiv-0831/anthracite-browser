@@ -1,4 +1,4 @@
-# Poseidon 🔱
+# Poseidon Browser
 
 The Open Source "Do It For Me" Browser.
 
