@@ -347,12 +347,20 @@ export function TopBar({
 
         setIsAIProcessing(true);
         try {
+            // 1. Create a new agent tab inside Poseidon and get CDP info
+            const agentTab = await (window as any).electron.agent.createAgentTab();
+            console.log('Agent tab created:', agentTab);
+
+            // 2. Run the agent task, connected to Poseidon via CDP
             const response = await fetch('http://127.0.0.1:8000/agent/run', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ instruction: inputValue.trim() }),
+                body: JSON.stringify({
+                    instruction: inputValue.trim(),
+                    cdp_url: agentTab.cdpUrl || 'http://127.0.0.1:9222',
+                }),
             });
             const data = await response.json();
             console.log('Agent Result:', data);

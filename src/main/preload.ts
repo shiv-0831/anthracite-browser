@@ -36,6 +36,11 @@ contextBridge.exposeInMainWorld('electron', {
         },
     },
 
+    // Agent
+    agent: {
+        createAgentTab: () => ipcRenderer.invoke('create-agent-tab'),
+    },
+
     // Tab Management
     tabs: {
         create: (url?: string, options?: { realmId?: string; dockId?: string }) => ipcRenderer.invoke('create-tab', url, options),

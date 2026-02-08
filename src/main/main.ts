@@ -1,5 +1,9 @@
 import { app, BrowserWindow, BrowserView, ipcMain, session, Menu } from 'electron'
 import path from 'node:path'
+
+// Enable CDP remote debugging so the AI agent can connect to Poseidon's browser
+const CDP_PORT = 9222
+app.commandLine.appendSwitch('remote-debugging-port', String(CDP_PORT))
 import { spawn, ChildProcess } from 'node:child_process'
 import { ElectronBlocker, Request } from '@ghostery/adblocker-electron'
 import fetch from 'cross-fetch'
@@ -118,9 +122,10 @@ function normalizeUrl(input: string): string {
     const urlPattern = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/
     const localhostPattern = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/
     const internalPattern = /^poseidon:\/\//
+    const aboutPattern = /^about:/
 
-    if (urlPattern.test(url) || localhostPattern.test(url) || internalPattern.test(url)) {
-        if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('poseidon://')) {
+    if (urlPattern.test(url) || localhostPattern.test(url) || internalPattern.test(url) || aboutPattern.test(url)) {
+        if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('poseidon://') && !url.startsWith('about:')) {
             url = 'https://' + url
         }
         return url
@@ -224,9 +229,13 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     view.webContents.on('did-frame-navigate', (_, url, httpResponseCode, httpStatusText, isMainFrame) => {
         if (isMainFrame) {
             console.log('[Nav] did-frame-navigate (main):', url)
-            tab.url = url
-            sendTabUpdate(tab)
-            addHistoryEntry(url, tab.title, tab.favicon)
+            // Don't overwrite poseidon:// URL when BrowserView loads about:blank for CDP
+            if (!(tab as any)._isInternalPage || !url.startsWith('about:')) {
+                ;(tab as any)._isInternalPage = false
+                tab.url = url
+                sendTabUpdate(tab)
+                addHistoryEntry(url, tab.title, tab.favicon)
+            }
         }
     })
 
@@ -234,7 +243,8 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     view.webContents.on('did-finish-load', () => {
         const currentUrl = view.webContents.getURL()
         console.log('[Nav] did-finish-load, URL:', currentUrl)
-        if (currentUrl && currentUrl !== tab.url) {
+        // Don't overwrite poseidon:// URL when BrowserView loads about:blank for CDP
+        if (currentUrl && currentUrl !== tab.url && !((tab as any)._isInternalPage && currentUrl.startsWith('about:'))) {
             tab.url = currentUrl
             sendTabUpdate(tab)
         }
@@ -266,7 +276,14 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     tabs.set(id, tab)
 
     // Navigate to URL
-    if (url !== 'poseidon://newtab') {
+    // Internal pages (poseidon://) are rendered by the React webview, not the BrowserView.
+    // But we still load about:blank into the BrowserView so it has a JS runtime
+    // (required for CDP's Runtime.runIfWaitingForDebugger to not hang).
+    if (url === 'poseidon://newtab' || url === 'poseidon://settings') {
+        // Mark as internal so nav events don't overwrite the poseidon:// URL
+        ;(tab as any)._isInternalPage = true
+        view.webContents.loadURL('about:blank')
+    } else {
         view.webContents.loadURL(normalizeUrl(url))
     }
 
@@ -533,6 +550,31 @@ function setupIPC(): void {
         const tab = url ? createTab(url, options) : createTab(undefined, options)
         switchToTab(tab.id)
         return { id: tab.id, realmId: getTabOrganization(tab.id)?.realmId }
+    })
+
+    // Agent tab: create a tab and return CDP connection info
+    ipcMain.handle('create-agent-tab', async () => {
+        const tab = createTab('about:blank')
+        switchToTab(tab.id)
+
+        // Query CDP for connection info
+        try {
+            const versionRes = await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`)
+            const version = await versionRes.json() as { webSocketDebuggerUrl: string; [key: string]: any }
+
+            return {
+                tabId: tab.id,
+                cdpUrl: `http://127.0.0.1:${CDP_PORT}`,
+                wsUrl: version.webSocketDebuggerUrl || null,
+            }
+        } catch (err) {
+            console.error('[Agent] Failed to query CDP endpoint:', err)
+            return {
+                tabId: tab.id,
+                cdpUrl: `http://127.0.0.1:${CDP_PORT}`,
+                wsUrl: null,
+            }
+        }
     })
 
     ipcMain.handle('close-tab', (_, tabId: string) => {
@@ -1121,10 +1163,8 @@ function createWindow(): void {
     // Load the UI
     win.loadURL('http://127.0.0.1:5173')
 
-    // Open DevTools in development
-    if (!app.isPackaged) {
-        win.webContents.openDevTools({ mode: 'detach' })
-    }
+    // DevTools: don't auto-open — it creates a devtools:// CDP target that
+    // hangs browser-use's session initialization. Open manually with Cmd+Option+I.
 
     // When UI is loaded, create initial tab (only if no tabs exist yet)
     win.webContents.on('did-finish-load', () => {

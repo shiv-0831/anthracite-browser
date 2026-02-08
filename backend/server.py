@@ -17,6 +17,7 @@ app.add_middleware(
 
 class TaskRequest(BaseModel):
     instruction: str
+    cdp_url: str = "http://127.0.0.1:9222"
 
 @app.get("/")
 def read_root():
@@ -26,9 +27,9 @@ def read_root():
 async def run_agent(task: TaskRequest):
     if not os.environ.get("OPENAI_API_KEY"):
         return {"status": "error", "message": "OPENAI_API_KEY not found in environment"}
-    
+
     try:
-        result = await run_agent_task_logic(task.instruction)
+        result = await run_agent_task_logic(task.instruction, task.cdp_url)
         return {"status": "success", "result": result}
     except Exception as e:
         return {"status": "error", "message": str(e)}
