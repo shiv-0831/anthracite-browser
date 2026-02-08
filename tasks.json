@@ -878,9 +878,9 @@
         {
             "id": "16",
             "title": "Fix Reload Behavior",
-            "status": "pending",
+            "status": "completed",
             "priority": "medium",
-            "context": "Reloading a page currently creates a new tab instead of refreshing the current one. It should keep the user on the same tab and reload the content in-place.",
+            "context": "Reloading a page currently creates a new tab instead of refreshing the current one. Fixed by: (1) Adding custom Electron Menu that intercepts Cmd+R/Cmd+Shift+R to reload the active webview via IPC instead of reloading the main window, (2) Guarding did-finish-load handler to only create initial tab when no tabs exist, preventing duplicate tab creation on renderer reload.",
             "created_at": "2024-06-15T10:10:00.000000"
         },
         {

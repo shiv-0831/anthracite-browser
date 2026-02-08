@@ -70,6 +70,11 @@ contextBridge.exposeInMainWorld('electron', {
         goForward: () => ipcRenderer.invoke('go-forward'),
         reload: () => ipcRenderer.invoke('reload'),
         stop: () => ipcRenderer.invoke('stop'),
+        onReloadActiveTab: (callback: () => void) => {
+            const subscription = () => callback()
+            ipcRenderer.on('reload-active-tab', subscription)
+            return () => ipcRenderer.removeListener('reload-active-tab', subscription)
+        },
     },
 
     // Ad Blocker
@@ -285,6 +290,7 @@ declare global {
                 goForward: () => Promise<{ success: boolean }>
                 reload: () => Promise<{ success: boolean }>
                 stop: () => Promise<{ success: boolean }>
+                onReloadActiveTab: (callback: () => void) => () => void
             }
             adBlock: {
                 toggle: (enabled: boolean) => Promise<{ enabled: boolean }>

@@ -280,6 +280,16 @@ function App() {
         }
     }, [activeTabId]);
 
+    // Listen for Cmd+R reload from main process menu
+    useEffect(() => {
+        if (window.electron?.navigation?.onReloadActiveTab) {
+            const unsubscribe = window.electron.navigation.onReloadActiveTab(() => {
+                handleReload();
+            });
+            return unsubscribe;
+        }
+    }, [handleReload]);
+
     return (
         <div className="h-screen w-full bg-surface overflow-hidden font-sans flex flex-col">
             {/* Top Navigation Bar */}

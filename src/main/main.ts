@@ -1,4 +1,4 @@
-import { app, BrowserWindow, BrowserView, ipcMain, session } from 'electron'
+import { app, BrowserWindow, BrowserView, ipcMain, session, Menu } from 'electron'
 import path from 'node:path'
 import { spawn, ChildProcess } from 'node:child_process'
 import { ElectronBlocker, Request } from '@ghostery/adblocker-electron'
@@ -1034,6 +1034,85 @@ function createWindow(): void {
         win?.show()
     })
 
+    // Set up custom menu to prevent Cmd+R from reloading the main window
+    // Instead, Cmd+R reloads the active tab's webview content
+    const menu = Menu.buildFromTemplate([
+        {
+            label: 'Poseidon',
+            submenu: [
+                { role: 'about' },
+                { type: 'separator' },
+                { role: 'hide' },
+                { role: 'hideOthers' },
+                { role: 'unhide' },
+                { type: 'separator' },
+                { role: 'quit' },
+            ],
+        },
+        {
+            label: 'Edit',
+            submenu: [
+                { role: 'undo' },
+                { role: 'redo' },
+                { type: 'separator' },
+                { role: 'cut' },
+                { role: 'copy' },
+                { role: 'paste' },
+                { role: 'selectAll' },
+            ],
+        },
+        {
+            label: 'View',
+            submenu: [
+                {
+                    label: 'Reload Page',
+                    accelerator: 'CmdOrCtrl+R',
+                    click: () => {
+                        if (activeTabId) {
+                            const tab = tabs.get(activeTabId)
+                            if (tab) {
+                                // Reload the webview in the renderer via IPC
+                                win?.webContents.send('reload-active-tab')
+                            }
+                        }
+                    },
+                },
+                {
+                    label: 'Force Reload Page',
+                    accelerator: 'CmdOrCtrl+Shift+R',
+                    click: () => {
+                        if (activeTabId) {
+                            win?.webContents.send('reload-active-tab')
+                        }
+                    },
+                },
+                { type: 'separator' },
+                {
+                    label: 'Toggle Developer Tools',
+                    accelerator: 'CmdOrCtrl+Alt+I',
+                    click: () => {
+                        win?.webContents.toggleDevTools()
+                    },
+                },
+                { type: 'separator' },
+                { role: 'resetZoom' },
+                { role: 'zoomIn' },
+                { role: 'zoomOut' },
+                { type: 'separator' },
+                { role: 'togglefullscreen' },
+            ],
+        },
+        {
+            label: 'Window',
+            submenu: [
+                { role: 'minimize' },
+                { role: 'zoom' },
+                { role: 'close' },
+            ],
+        },
+    ])
+    Menu.setApplicationMenu(menu)
+
     // Load the UI
     win.loadURL('http://127.0.0.1:5173')
 
@@ -1042,11 +1121,21 @@ function createWindow(): void {
         win.webContents.openDevTools({ mode: 'detach' })
     }
 
-    // When UI is loaded, create initial tab
+    // When UI is loaded, create initial tab (only if no tabs exist yet)
     win.webContents.on('did-finish-load', () => {
-        // Create initial tab
-        const tab = createTab('poseidon://newtab')
-        switchToTab(tab.id)
+        // Guard: only create a tab on first load, not on renderer reload
+        if (tabs.size === 0) {
+            const tab = createTab('poseidon://newtab')
+            switchToTab(tab.id)
+        } else {
+            // Renderer reloaded - resync existing tabs
+            sendTabsUpdate()
+            if (activeTabId) {
+                const tab = tabs.get(activeTabId)
+                if (tab) sendTabUpdate(tab)
+                sendActiveTabUpdate()
+            }
+        }
 
         // Send initial ad block status
         win?.webContents.send('ad-block-status', {
