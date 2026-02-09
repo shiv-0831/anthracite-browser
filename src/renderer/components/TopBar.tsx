@@ -360,6 +360,7 @@ export function TopBar({
                 body: JSON.stringify({
                     instruction: inputValue.trim(),
                     cdp_url: agentTab.cdpUrl || 'http://127.0.0.1:9222',
+                    target_id: agentTab.targetId || null,
                 }),
             });
             const data = await response.json();

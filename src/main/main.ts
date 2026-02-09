@@ -212,17 +212,22 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     // Main navigation event - fires for full page loads
     view.webContents.on('did-navigate', (_, url) => {
         console.log('[Nav] did-navigate:', url)
-        tab.url = url
-        sendTabUpdate(tab)
-        addHistoryEntry(url, tab.title, tab.favicon)
+        // Don't overwrite poseidon:// URL when BrowserView loads about:blank for CDP
+        if (!(tab as any)._isInternalPage || !url.startsWith('about:')) {
+            tab.url = url
+            sendTabUpdate(tab)
+            addHistoryEntry(url, tab.title, tab.favicon)
+        }
     })
 
     // In-page navigation (hash changes, pushState)
     view.webContents.on('did-navigate-in-page', (_, url) => {
         console.log('[Nav] did-navigate-in-page:', url)
-        tab.url = url
-        sendTabUpdate(tab)
-        addHistoryEntry(url, tab.title, tab.favicon)
+        if (!(tab as any)._isInternalPage || !url.startsWith('about:')) {
+            tab.url = url
+            sendTabUpdate(tab)
+            addHistoryEntry(url, tab.title, tab.favicon)
+        }
     })
 
     // Frame navigation - catches navigations in sub-frames
@@ -251,6 +256,8 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     })
 
     view.webContents.on('page-title-updated', (_, title) => {
+        // Don't overwrite title for internal pages (BrowserView loads about:blank for CDP)
+        if ((tab as any)._isInternalPage) return
         tab.title = title || 'Untitled'
         sendTabUpdate(tab)
         // Update history with new title
@@ -274,6 +281,16 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     })
 
     tabs.set(id, tab)
+
+    // Attach BrowserView to window so it has a rendering surface.
+    // This is required for CDP commands (DOM extraction, screenshots, accessibility tree)
+    // to work properly. The view is positioned off-screen; the <webview> in React
+    // handles the user-visible display.
+    if (win && !win.isDestroyed()) {
+        win.addBrowserView(view)
+        view.setBounds({ x: 0, y: -10000, width: 1280, height: 720 })
+        view.webContents.setAudioMuted(true)
+    }
 
     // Navigate to URL
     // Internal pages (poseidon://) are rendered by the React webview, not the BrowserView.
@@ -312,8 +329,11 @@ function closeTab(tabId: string): void {
     // Remove tab organization
     removeTabOrganization(tabId)
 
-        // Destroy the view (for cleanup)
-        ; (tab.view.webContents as any).destroy()
+    // Remove BrowserView from window and destroy
+    if (win && !win.isDestroyed()) {
+        win.removeBrowserView(tab.view)
+    }
+    ;(tab.view.webContents as any).destroy()
     tabs.delete(tabId)
 
     // If this was the active tab, switch to another
@@ -552,27 +572,40 @@ function setupIPC(): void {
         return { id: tab.id, realmId: getTabOrganization(tab.id)?.realmId }
     })
 
-    // Agent tab: create a tab and return CDP connection info
+    // Agent tab: create a tab and return CDP connection info including target ID
     ipcMain.handle('create-agent-tab', async () => {
+        // Snapshot existing targets before creating the tab
+        let existingTargetIds = new Set<string>()
+        try {
+            const beforeRes = await fetch(`http://127.0.0.1:${CDP_PORT}/json`)
+            const before = await beforeRes.json() as Array<{ id: string }>
+            existingTargetIds = new Set(before.map((t: any) => t.id))
+        } catch { /* ignore */ }
+
         const tab = createTab('about:blank')
         switchToTab(tab.id)
 
-        // Query CDP for connection info
+        // Find the new CDP target by diffing before/after
         try {
-            const versionRes = await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`)
-            const version = await versionRes.json() as { webSocketDebuggerUrl: string; [key: string]: any }
+            // Small delay to let the target register
+            await new Promise(r => setTimeout(r, 200))
+            const afterRes = await fetch(`http://127.0.0.1:${CDP_PORT}/json`)
+            const after = await afterRes.json() as Array<{ id: string; type: string; url: string }>
+            const newTarget = after.find((t: any) => t.type === 'page' && !existingTargetIds.has(t.id))
+
+            console.log('[Agent] New agent tab target:', newTarget?.id, newTarget?.url)
 
             return {
                 tabId: tab.id,
                 cdpUrl: `http://127.0.0.1:${CDP_PORT}`,
-                wsUrl: version.webSocketDebuggerUrl || null,
+                targetId: newTarget?.id || null,
             }
         } catch (err) {
             console.error('[Agent] Failed to query CDP endpoint:', err)
             return {
                 tabId: tab.id,
                 cdpUrl: `http://127.0.0.1:${CDP_PORT}`,
-                wsUrl: null,
+                targetId: null,
             }
         }
     })

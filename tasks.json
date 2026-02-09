@@ -932,8 +932,14 @@
                 {
                     "id": "18.6",
                     "title": "Test end-to-end: agent task runs visibly inside Poseidon tab",
+                    "status": "in-progress",
+                    "context": "Verify: give agent a task like 'search for cats on google', watch it execute inside a Poseidon tab, tab stays alive after completion, URL bar updates, tab title updates. Known issues: (1) home tab goes blank when agent starts - nav event guards need verification, (2) screenshot via CDP hangs because BrowserView has no rendering surface (workaround: use_vision='auto' + 5s timeout fallback)."
+                },
+                {
+                    "id": "18.7",
+                    "title": "Fix CDP screenshots: BrowserView has no rendering surface",
                     "status": "pending",
-                    "context": "Verify: give agent a task like 'search for cats on google', watch it execute inside a Poseidon tab, tab stays alive after completion, URL bar updates, tab title updates."
+                    "context": "ROOT CAUSE: Poseidon uses a dual rendering architecture - BrowserView (main process, state tracking) + <webview> tag (renderer, actual display). CDP targets correspond to BrowserView webContents, which are NOT attached to any visible window via addBrowserView(). This means Page.captureScreenshot hangs indefinitely because there's no rendered frame to capture. CURRENT WORKAROUND: use_vision='auto' so agent only requests screenshots when explicitly needed, plus 5s timeout fallback that returns None. FIX OPTIONS: (A) Attach BrowserViews to the window off-screen so they render (simplest but may have perf impact), (B) Route screenshot requests through Electron's webContents.capturePage() IPC instead of CDP (requires HTTP endpoint or IPC bridge from Python), (C) Capture from the <webview> webContents instead of BrowserView (need to map between the two), (D) Use Electron's desktopCapturer API to grab the visible window region. Option B is likely the cleanest production approach."
                 }
             ]
         },
@@ -982,8 +988,8 @@
                 {
                     "id": "20.2",
                     "title": "Make screenshots optional per step",
-                    "status": "pending",
-                    "context": "Modify agent loop to skip screenshot capture when use_vision=False. Currently always captured even when unused."
+                    "status": "completed",
+                    "context": "DONE via use_vision='auto' in Agent config. Agent only requests screenshots when it explicitly needs visual info (via screenshot action). Combined with monkey-patched screenshot handler that has 5s timeout + graceful fallback to None. Full fix requires task 18.7 (rendering surface) so screenshots actually work when requested."
                 },
                 {
                     "id": "20.3",
