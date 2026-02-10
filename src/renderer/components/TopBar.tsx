@@ -427,7 +427,7 @@ export function TopBar({
         <header
             className={cn(
                 "h-[52px] bg-[#0A0A0B]/90 backdrop-blur-xl border-b border-white/[0.06] flex items-center gap-2 px-3",
-                "select-none",
+                "select-none relative z-[100]",
                 className
             )}
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}

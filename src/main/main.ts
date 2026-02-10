@@ -604,7 +604,7 @@ function setupIPC(): void {
             existingTargetIds = new Set(before.map((t: any) => t.id))
         } catch { /* ignore */ }
 
-        const tab = createTab('about:blank')
+        const tab = createTab('poseidon://newtab')
         switchToTab(tab.id)
 
         // Find the new CDP target by diffing before/after
@@ -1299,30 +1299,9 @@ function createWindow(): void {
             }
         }
 
-        // HTTPS Upgrade: Intercept HTTP requests and upgrade to HTTPS
-        webContents.session.webRequest.onBeforeRequest(
-            { urls: ['http://*/*'] },
-            (details, callback) => {
-                // Skip localhost and local network
-                const url = new URL(details.url)
-                const isLocal = url.hostname === 'localhost' ||
-                    url.hostname === '127.0.0.1' ||
-                    url.hostname.endsWith('.local')
-
-                if (!isLocal && adBlockEnabled) {
-                    const httpsUrl = details.url.replace('http://', 'https://')
-                    httpsUpgradeCount++
-
-                    // Notify renderer of the upgrade
-                    if (win && !win.isDestroyed()) {
-                        win.webContents.send('https-upgraded', { count: httpsUpgradeCount })
-                    }
-                    callback({ redirectURL: httpsUrl })
-                } else {
-                    callback({})
-                }
-            }
-        )
+        // HTTPS Upgrade + Ad Blocking — use unified interceptor
+        // (must be a single listener since Electron allows only one onBeforeRequest per session)
+        setupRequestInterceptor(webContents.session)
 
         // Cookie listener removed to prevent MaxListenersExceededWarning on shared session
 

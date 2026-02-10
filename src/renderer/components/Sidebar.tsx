@@ -972,7 +972,7 @@ export function Sidebar({ className, isPinned, onPinnedChange, tabs, activeTabId
                 <AnimatePresence>
                     {isVisible && !isPinned && (
                         <motion.div
-                            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40"
+                            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[150]"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -989,7 +989,7 @@ export function Sidebar({ className, isPinned, onPinnedChange, tabs, activeTabId
                     onMouseLeave={handleMouseLeave}
                     style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                     className={cn(
-                        "fixed left-3 top-3 bottom-3 w-[280px] z-50",
+                        "fixed left-3 top-3 bottom-3 w-[280px] z-[200]",
                         "bg-[#111113]/90 backdrop-blur-2xl",
                         "rounded-2xl border border-white/[0.06]",
                         "shadow-large",

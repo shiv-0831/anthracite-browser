@@ -18,6 +18,7 @@ export interface AppSettings {
     compactMode: boolean;
     homeBackground: 'earth-horizon' | 'gradient-mesh' | 'aurora' | 'minimal' | 'custom';
     homeBackgroundCustomUrl: string;
+    homeBackgroundIntensity: number;
     uiScale: 'extra-small' | 'small' | 'medium' | 'large' | 'extra-large';
 
     // Privacy
@@ -49,6 +50,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     compactMode: false,
     homeBackground: 'earth-horizon',
     homeBackgroundCustomUrl: '',
+    homeBackgroundIntensity: 50,
     uiScale: 'small',
 
     // Privacy

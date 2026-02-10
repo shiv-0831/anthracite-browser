@@ -20,6 +20,7 @@ export function HomePage({ className }: HomePageProps) {
     const [greeting] = useState(getGreeting);
     const [background, setBackground] = useState<HomeBackground>('earth-horizon');
     const [customUrl, setCustomUrl] = useState('');
+    const [intensity, setIntensity] = useState(60);
 
     // Load background preference from settings
     useEffect(() => {
@@ -32,6 +33,9 @@ export function HomePage({ className }: HomePageProps) {
                 if (settings?.homeBackgroundCustomUrl) {
                     setCustomUrl(settings.homeBackgroundCustomUrl);
                 }
+                if (settings?.homeBackgroundIntensity !== undefined) {
+                    setIntensity(settings.homeBackgroundIntensity);
+                }
             }
         };
         loadBg();
@@ -43,6 +47,9 @@ export function HomePage({ className }: HomePageProps) {
             }
             if (data.settings?.homeBackgroundCustomUrl !== undefined) {
                 setCustomUrl(data.settings.homeBackgroundCustomUrl);
+            }
+            if (data.settings?.homeBackgroundIntensity !== undefined) {
+                setIntensity(data.settings.homeBackgroundIntensity);
             }
         });
         return () => { unsub?.(); };
@@ -59,28 +66,27 @@ export function HomePage({ className }: HomePageProps) {
             "flex flex-col items-center justify-center h-full w-full bg-[#0A0A0B] relative overflow-hidden",
             className
         )}>
-            {/* Dynamic background */}
-            {background === 'earth-horizon' && (
-                <>
-                    <div className="earth-horizon" />
-                    <div className="earth-horizon-glow" />
-                </>
-            )}
-            {background === 'gradient-mesh' && (
-                <div className="gradient-mesh-bg" />
-            )}
-            {background === 'aurora' && (
-                <div className="aurora-bg" />
-            )}
-            {background === 'custom' && customUrl && (
-                <div
-                    className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center"
-                    style={{
-                        backgroundImage: `url(${customUrl})`,
-                        opacity: 0.3,
-                    }}
-                />
-            )}
+            {/* Dynamic background — intensity controlled */}
+            <div className="pointer-events-none" style={{ opacity: intensity / 100 }}>
+                {background === 'earth-horizon' && (
+                    <>
+                        <div className="earth-horizon" />
+                        <div className="earth-horizon-glow" />
+                    </>
+                )}
+                {background === 'gradient-mesh' && (
+                    <div className="gradient-mesh-bg" />
+                )}
+                {background === 'aurora' && (
+                    <div className="aurora-bg" />
+                )}
+                {background === 'custom' && customUrl && (
+                    <div
+                        className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center"
+                        style={{ backgroundImage: `url(${customUrl})` }}
+                    />
+                )}
+            </div>
             {/* minimal = no background layers, just solid #0A0A0B */}
 
             {/* Subtle ambient orb (always present, very faint) */}

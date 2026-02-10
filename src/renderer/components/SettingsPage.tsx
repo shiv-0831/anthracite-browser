@@ -22,6 +22,7 @@ interface AppSettings {
     compactMode: boolean;
     homeBackground: 'earth-horizon' | 'gradient-mesh' | 'aurora' | 'minimal' | 'custom';
     homeBackgroundCustomUrl: string;
+    homeBackgroundIntensity: number;
     uiScale: 'extra-small' | 'small' | 'medium' | 'large' | 'extra-large';
     historyEnabled: boolean;
     historyRetentionDays: number;
@@ -460,6 +461,32 @@ export function SettingsPage({ className }: SettingsPageProps) {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Background Intensity Slider */}
+                            {settings.homeBackground !== 'minimal' && (
+                                <div className="mt-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div>
+                                            <h4 className="text-sm font-medium text-text-primary">Background Intensity</h4>
+                                            <p className="text-xs text-text-tertiary mt-0.5">Adjust how prominent the background effect appears</p>
+                                        </div>
+                                        <span className="text-sm font-medium text-text-secondary tabular-nums">{settings.homeBackgroundIntensity}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={100}
+                                        step={5}
+                                        value={settings.homeBackgroundIntensity}
+                                        onChange={(e) => updateSetting('homeBackgroundIntensity', parseInt(e.target.value))}
+                                        className="w-full h-1.5 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-brand
+                                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4
+                                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand [&::-webkit-slider-thumb]:shadow-glow
+                                            [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform
+                                            [&::-webkit-slider-thumb]:hover:scale-110"
+                                    />
+                                </div>
+                            )}
                         </section>
                     )}
 
