@@ -19,6 +19,7 @@ module.exports = {
         extend: {
             fontFamily: {
                 sans: ['Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+                display: ['Geist', 'Inter', 'SF Pro Display', '-apple-system', 'system-ui', 'sans-serif'],
                 mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', 'monospace'],
             },
             colors: {

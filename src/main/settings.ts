@@ -16,6 +16,8 @@ export interface AppSettings {
     theme: 'light' | 'dark' | 'system';
     sidebarPosition: 'left' | 'right';
     compactMode: boolean;
+    homeBackground: 'earth-horizon' | 'gradient-mesh' | 'aurora' | 'minimal' | 'custom';
+    homeBackgroundCustomUrl: string;
 
     // Privacy
     historyEnabled: boolean;
@@ -41,9 +43,11 @@ const DEFAULT_SETTINGS: AppSettings = {
     defaultSearchEngine: 'google',
 
     // Appearance
-    theme: 'light',
+    theme: 'dark',
     sidebarPosition: 'left',
     compactMode: false,
+    homeBackground: 'earth-horizon',
+    homeBackgroundCustomUrl: '',
 
     // Privacy
     historyEnabled: true,

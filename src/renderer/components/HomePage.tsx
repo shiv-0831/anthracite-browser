@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { CommandBar } from './CommandBar';
-import { Sparkles } from 'lucide-react';
+
+type HomeBackground = 'earth-horizon' | 'gradient-mesh' | 'aurora' | 'minimal' | 'custom';
 
 interface HomePageProps {
     className?: string;
@@ -17,6 +18,35 @@ function getGreeting(): string {
 
 export function HomePage({ className }: HomePageProps) {
     const [greeting] = useState(getGreeting);
+    const [background, setBackground] = useState<HomeBackground>('earth-horizon');
+    const [customUrl, setCustomUrl] = useState('');
+
+    // Load background preference from settings
+    useEffect(() => {
+        const loadBg = async () => {
+            if (window.electron?.settings) {
+                const settings = await window.electron.settings.getAll();
+                if (settings?.homeBackground) {
+                    setBackground(settings.homeBackground);
+                }
+                if (settings?.homeBackgroundCustomUrl) {
+                    setCustomUrl(settings.homeBackgroundCustomUrl);
+                }
+            }
+        };
+        loadBg();
+
+        // Listen for settings changes
+        const unsub = window.electron?.settings.onChanged((data: any) => {
+            if (data.settings?.homeBackground) {
+                setBackground(data.settings.homeBackground);
+            }
+            if (data.settings?.homeBackgroundCustomUrl !== undefined) {
+                setCustomUrl(data.settings.homeBackgroundCustomUrl);
+            }
+        });
+        return () => { unsub?.(); };
+    }, []);
 
     const handleSearch = (instruction: string) => {
         const input = instruction.trim();
@@ -26,37 +56,46 @@ export function HomePage({ className }: HomePageProps) {
 
     return (
         <div className={cn(
-            "flex flex-col items-center justify-center h-full w-full bg-mesh-dark relative overflow-hidden",
+            "flex flex-col items-center justify-center h-full w-full bg-[#0A0A0B] relative overflow-hidden",
             className
         )}>
-            {/* Animated gradient orbs */}
-            <div className="absolute inset-0 pointer-events-none">
-                <motion.div
-                    className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full"
+            {/* Dynamic background */}
+            {background === 'earth-horizon' && (
+                <>
+                    <div className="earth-horizon" />
+                    <div className="earth-horizon-glow" />
+                </>
+            )}
+            {background === 'gradient-mesh' && (
+                <div className="gradient-mesh-bg" />
+            )}
+            {background === 'aurora' && (
+                <div className="aurora-bg" />
+            )}
+            {background === 'custom' && customUrl && (
+                <div
+                    className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center"
                     style={{
-                        background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)',
-                    }}
-                    animate={{
-                        x: [0, 30, -20, 0],
-                        y: [0, -20, 15, 0],
-                    }}
-                    transition={{
-                        duration: 20,
-                        repeat: Infinity,
-                        ease: 'linear',
+                        backgroundImage: `url(${customUrl})`,
+                        opacity: 0.3,
                     }}
                 />
+            )}
+            {/* minimal = no background layers, just solid #0A0A0B */}
+
+            {/* Subtle ambient orb (always present, very faint) */}
+            <div className="absolute inset-0 pointer-events-none">
                 <motion.div
-                    className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full"
+                    className="absolute top-[15%] left-[30%] w-[600px] h-[600px] rounded-full"
                     style={{
-                        background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(99,102,241,0.03) 0%, transparent 70%)',
                     }}
                     animate={{
-                        x: [0, -25, 15, 0],
-                        y: [0, 20, -10, 0],
+                        x: [0, 20, -15, 0],
+                        y: [0, -15, 10, 0],
                     }}
                     transition={{
-                        duration: 25,
+                        duration: 30,
                         repeat: Infinity,
                         ease: 'linear',
                     }}
@@ -64,35 +103,52 @@ export function HomePage({ className }: HomePageProps) {
             </div>
 
             <motion.div
-                className="relative w-full max-w-2xl px-6 flex flex-col items-center gap-10 -mt-16"
+                className="relative w-full max-w-2xl px-6 flex flex-col items-center gap-12 -mt-16 z-10"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
             >
                 {/* Brand / Greeting */}
-                <div className="flex flex-col items-center gap-4">
-                    <div className="relative group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-brand to-accent-violet rounded-3xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity" />
-                        <div className="relative h-20 w-20 rounded-3xl bg-gradient-to-br from-brand to-accent-violet flex items-center justify-center shadow-glow-lg">
-                            <Sparkles className="h-10 w-10 text-white" />
-                        </div>
-                    </div>
-                    <div className="text-center">
-                        <h1 className="text-4xl font-light text-text-primary tracking-tight">
+                <div className="flex flex-col items-center gap-5">
+                    {/* Wordmark */}
+                    <motion.h2
+                        className="font-display text-sm font-medium tracking-[0.3em] uppercase text-white/25"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                    >
+                        Poseidon
+                    </motion.h2>
+
+                    {/* Greeting */}
+                    <motion.div
+                        className="text-center"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                    >
+                        <h1 className="font-display text-5xl font-extralight text-text-primary tracking-tight">
                             {greeting}
                         </h1>
-                        <p className="mt-2 text-text-tertiary">
+                        <p className="mt-3 text-text-tertiary text-base font-light">
                             Search the web, or let AI browse for you.
                         </p>
-                    </div>
+                    </motion.div>
                 </div>
 
                 {/* Command Bar */}
-                <CommandBar
-                    onRun={handleSearch}
-                    isRunning={false}
-                    status={'idle'}
-                />
+                <motion.div
+                    className="w-full"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                    <CommandBar
+                        onRun={handleSearch}
+                        isRunning={false}
+                        status={'idle'}
+                    />
+                </motion.div>
             </motion.div>
         </div>
     );

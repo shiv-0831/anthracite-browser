@@ -20,6 +20,8 @@ interface AppSettings {
     theme: 'light' | 'dark' | 'system';
     sidebarPosition: 'left' | 'right';
     compactMode: boolean;
+    homeBackground: 'earth-horizon' | 'gradient-mesh' | 'aurora' | 'minimal' | 'custom';
+    homeBackgroundCustomUrl: string;
     historyEnabled: boolean;
     historyRetentionDays: number;
     clearHistoryOnExit: boolean;
@@ -369,6 +371,65 @@ export function SettingsPage({ className }: SettingsPageProps) {
                                         onChange={(v) => updateSetting('compactMode', v)}
                                     />
                                 </SettingRow>
+                            </div>
+
+                            {/* Home Background Picker */}
+                            <div className="mt-6">
+                                <h4 className="text-sm font-medium text-text-primary mb-1">Home Background</h4>
+                                <p className="text-xs text-text-tertiary mb-4">Choose the background for your new tab page</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {([
+                                        { id: 'earth-horizon' as const, label: 'Earth Horizon', desc: 'Atmospheric glow from space' },
+                                        { id: 'gradient-mesh' as const, label: 'Gradient Mesh', desc: 'Subtle color gradients' },
+                                        { id: 'aurora' as const, label: 'Aurora', desc: 'Northern lights effect' },
+                                        { id: 'minimal' as const, label: 'Minimal', desc: 'Pure dark background' },
+                                    ]).map((bg) => (
+                                        <button
+                                            key={bg.id}
+                                            onClick={() => updateSetting('homeBackground', bg.id)}
+                                            className={cn(
+                                                "relative flex flex-col items-start p-3 rounded-xl border transition-all duration-200 text-left",
+                                                settings.homeBackground === bg.id
+                                                    ? "border-brand/40 bg-brand/5 ring-1 ring-brand/20"
+                                                    : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1]"
+                                            )}
+                                        >
+                                            {/* Preview swatch */}
+                                            <div className={cn(
+                                                "w-full h-16 rounded-lg mb-2.5 overflow-hidden",
+                                                bg.id === 'earth-horizon' && "bg-[#0A0A0B]",
+                                                bg.id === 'gradient-mesh' && "bg-[#0A0A0B]",
+                                                bg.id === 'aurora' && "bg-[#0A0A0B]",
+                                                bg.id === 'minimal' && "bg-[#0A0A0B]",
+                                            )}>
+                                                {bg.id === 'earth-horizon' && (
+                                                    <div className="w-full h-full relative">
+                                                        <div className="absolute bottom-0 left-0 right-0 h-3/4" style={{
+                                                            background: 'radial-gradient(ellipse 150% 60% at 50% 100%, rgba(135,206,250,0.12) 0%, rgba(70,130,220,0.06) 30%, transparent 60%), radial-gradient(ellipse 200% 100% at 50% 100%, rgba(12,20,40,0.5) 0%, transparent 70%)'
+                                                        }} />
+                                                    </div>
+                                                )}
+                                                {bg.id === 'gradient-mesh' && (
+                                                    <div className="w-full h-full" style={{
+                                                        background: 'radial-gradient(at 20% 20%, rgba(99,102,241,0.15) 0%, transparent 50%), radial-gradient(at 80% 80%, rgba(139,92,246,0.1) 0%, transparent 50%)'
+                                                    }} />
+                                                )}
+                                                {bg.id === 'aurora' && (
+                                                    <div className="w-full h-full" style={{
+                                                        background: 'radial-gradient(ellipse 80% 50% at 30% 20%, rgba(16,185,129,0.12) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 70% 30%, rgba(99,102,241,0.10) 0%, transparent 50%)'
+                                                    }} />
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-medium text-text-primary">{bg.label}</span>
+                                            <span className="text-xs text-text-tertiary mt-0.5">{bg.desc}</span>
+                                            {settings.homeBackground === bg.id && (
+                                                <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-brand flex items-center justify-center">
+                                                    <Check className="h-3 w-3 text-white" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </section>
                     )}

@@ -478,3 +478,137 @@
     transform: translateY(-8px);
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
+/* ============================================
+   Earth Horizon Background
+   ============================================ */
+
+/* Static earth curvature — dark arc at bottom with atmospheric glow */
+.earth-horizon {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50vh;
+    background:
+        /* Thin bright atmospheric edge */
+        radial-gradient(ellipse 120% 20% at 50% 100%,
+            rgba(135, 206, 250, 0.10) 0%,
+            rgba(100, 149, 237, 0.05) 30%,
+            transparent 60%
+        ),
+        /* Broader atmospheric scatter */
+        radial-gradient(ellipse 150% 45% at 50% 100%,
+            rgba(70, 130, 220, 0.06) 0%,
+            rgba(50, 100, 180, 0.03) 35%,
+            transparent 55%
+        ),
+        /* Earth surface — dark mass */
+        radial-gradient(ellipse 200% 100% at 50% 100%,
+            rgba(12, 20, 40, 0.6) 0%,
+            rgba(10, 15, 30, 0.3) 40%,
+            rgba(10, 10, 11, 0.1) 65%,
+            transparent 100%
+        );
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Animated glow layer — subtle breathing */
+.earth-horizon-glow {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40vh;
+    background: radial-gradient(ellipse 140% 35% at 50% 100%,
+        rgba(135, 206, 250, 0.06) 0%,
+        rgba(99, 149, 237, 0.03) 30%,
+        transparent 50%
+    );
+    animation: atmosphereBreathe 12s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes atmosphereBreathe {
+    0%, 100% {
+        opacity: 0.7;
+        transform: translateY(0);
+    }
+    50% {
+        opacity: 1;
+        transform: translateY(-3px);
+    }
+}
+
+/* ============================================
+   Gradient Mesh Background
+   ============================================ */
+
+.gradient-mesh-bg {
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ============================================
+   Aurora Background
+   ============================================ */
+
+.aurora-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.aurora-bg::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -10%;
+    right: -10%;
+    height: 60%;
+    background:
+        radial-gradient(ellipse 80% 50% at 30% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 70% 40%, rgba(99, 102, 241, 0.07) 0%, transparent 50%),
+        radial-gradient(ellipse 90% 60% at 50% 30%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
+    animation: auroraDrift 20s ease-in-out infinite alternate;
+}
+
+.aurora-bg::after {
+    content: '';
+    position: absolute;
+    top: -10%;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background:
+        radial-gradient(ellipse 70% 40% at 60% 50%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 30% at 30% 60%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
+    animation: auroraDrift 25s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes auroraDrift {
+    0% { transform: translateX(-3%) translateY(0); }
+    100% { transform: translateX(3%) translateY(-2%); }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .earth-horizon-glow {
+        animation: none;
+        opacity: 0.85;
+    }
+    .aurora-bg::before,
+    .aurora-bg::after {
+        animation: none;
+    }
+}

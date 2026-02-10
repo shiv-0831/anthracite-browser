@@ -281,6 +281,8 @@ interface AppSettings {
     theme: 'light' | 'dark' | 'system'
     sidebarPosition: 'left' | 'right'
     compactMode: boolean
+    homeBackground: 'earth-horizon' | 'gradient-mesh' | 'aurora' | 'minimal' | 'custom'
+    homeBackgroundCustomUrl: string
     historyEnabled: boolean
     historyRetentionDays: number
     clearHistoryOnExit: boolean
