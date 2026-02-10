@@ -164,7 +164,7 @@ contextBridge.exposeInMainWorld('electron', {
         get: (realmId: string) => ipcRenderer.invoke('get-realm', realmId),
         getActiveId: () => ipcRenderer.invoke('get-active-realm-id'),
         setActive: (realmId: string) => ipcRenderer.invoke('set-active-realm', realmId),
-        create: (name: string, icon?: string, color?: string) => ipcRenderer.invoke('create-realm', name, icon, color),
+        create: (name: string, icon?: string, color?: string, template?: any) => ipcRenderer.invoke('create-realm', name, icon, color, template),
         update: (realmId: string, updates: { name?: string; icon?: string; color?: string }) => ipcRenderer.invoke('update-realm', realmId, updates),
         delete: (realmId: string) => ipcRenderer.invoke('delete-realm', realmId),
         reorder: (realmIds: string[]) => ipcRenderer.invoke('reorder-realms', realmIds),
@@ -357,7 +357,7 @@ declare global {
                 get: (realmId: string) => Promise<Realm | null>
                 getActiveId: () => Promise<string>
                 setActive: (realmId: string) => Promise<{ success: boolean }>
-                create: (name: string, icon?: IconName, color?: ThemeColor) => Promise<Realm>
+                create: (name: string, icon?: IconName, color?: ThemeColor, template?: any) => Promise<Realm>
                 update: (realmId: string, updates: { name?: string; icon?: IconName; color?: ThemeColor }) => Promise<Realm | null>
                 delete: (realmId: string) => Promise<{ success: boolean }>
                 reorder: (realmIds: string[]) => Promise<{ success: boolean }>

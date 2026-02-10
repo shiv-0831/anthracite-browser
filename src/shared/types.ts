@@ -24,16 +24,16 @@ export type ThemeColor =
 
 /** Color values mapped to Tailwind/CSS colors */
 export const THEME_COLORS: Record<ThemeColor, { bg: string; text: string; accent: string }> = {
-    blue:   { bg: 'bg-blue-500',   text: 'text-blue-500',   accent: '#3b82f6' },
+    blue: { bg: 'bg-blue-500', text: 'text-blue-500', accent: '#3b82f6' },
     purple: { bg: 'bg-purple-500', text: 'text-purple-500', accent: '#a855f7' },
-    pink:   { bg: 'bg-pink-500',   text: 'text-pink-500',   accent: '#ec4899' },
-    red:    { bg: 'bg-red-500',    text: 'text-red-500',    accent: '#ef4444' },
+    pink: { bg: 'bg-pink-500', text: 'text-pink-500', accent: '#ec4899' },
+    red: { bg: 'bg-red-500', text: 'text-red-500', accent: '#ef4444' },
     orange: { bg: 'bg-orange-500', text: 'text-orange-500', accent: '#f97316' },
     yellow: { bg: 'bg-yellow-500', text: 'text-yellow-500', accent: '#eab308' },
-    green:  { bg: 'bg-green-500',  text: 'text-green-500',  accent: '#22c55e' },
-    teal:   { bg: 'bg-teal-500',   text: 'text-teal-500',   accent: '#14b8a6' },
-    cyan:   { bg: 'bg-cyan-500',   text: 'text-cyan-500',   accent: '#06b6d4' },
-    gray:   { bg: 'bg-gray-500',   text: 'text-gray-500',   accent: '#6b7280' },
+    green: { bg: 'bg-green-500', text: 'text-green-500', accent: '#22c55e' },
+    teal: { bg: 'bg-teal-500', text: 'text-teal-500', accent: '#14b8a6' },
+    cyan: { bg: 'bg-cyan-500', text: 'text-cyan-500', accent: '#06b6d4' },
+    gray: { bg: 'bg-gray-500', text: 'text-gray-500', accent: '#6b7280' },
 };
 
 /** Available icons for realms and docks (lucide-react icon names) */
@@ -217,95 +217,7 @@ export interface SidebarSnapshot {
 // Realm Templates
 // ============================================
 
-/** Template for quickly creating pre-configured realms */
-export interface RealmTemplate {
-    id: string;
-    name: string;
-    icon: IconName;
-    color: ThemeColor;
-    description: string;
-    suggestedDocks: {
-        name: string;
-        icon: IconName;
-        color: ThemeColor;
-    }[];
-}
-
-/** Built-in realm templates */
-export const REALM_TEMPLATES: RealmTemplate[] = [
-    {
-        id: 'developer',
-        name: 'Developer',
-        icon: 'code',
-        color: 'purple',
-        description: 'For coding and development work',
-        suggestedDocks: [
-            { name: 'GitHub', icon: 'github', color: 'gray' },
-            { name: 'Documentation', icon: 'book-open', color: 'blue' },
-            { name: 'Stack Overflow', icon: 'layers', color: 'orange' },
-        ]
-    },
-    {
-        id: 'work',
-        name: 'Work',
-        icon: 'briefcase',
-        color: 'blue',
-        description: 'Professional and productivity',
-        suggestedDocks: [
-            { name: 'Email', icon: 'mail', color: 'red' },
-            { name: 'Calendar', icon: 'calendar', color: 'green' },
-            { name: 'Documents', icon: 'folder', color: 'yellow' },
-        ]
-    },
-    {
-        id: 'social',
-        name: 'Social',
-        icon: 'message-circle',
-        color: 'pink',
-        description: 'Social media and messaging',
-        suggestedDocks: [
-            { name: 'Twitter', icon: 'twitter', color: 'cyan' },
-            { name: 'Messages', icon: 'message-circle', color: 'green' },
-            { name: 'Reddit', icon: 'hash', color: 'orange' },
-        ]
-    },
-    {
-        id: 'entertainment',
-        name: 'Entertainment',
-        icon: 'film',
-        color: 'red',
-        description: 'Videos, music, and fun',
-        suggestedDocks: [
-            { name: 'YouTube', icon: 'youtube', color: 'red' },
-            { name: 'Music', icon: 'music', color: 'green' },
-            { name: 'Streaming', icon: 'film', color: 'purple' },
-        ]
-    },
-    {
-        id: 'gaming',
-        name: 'Gaming',
-        icon: 'gamepad-2',
-        color: 'green',
-        description: 'Games and gaming communities',
-        suggestedDocks: [
-            { name: 'Twitch', icon: 'twitch', color: 'purple' },
-            { name: 'Discord', icon: 'message-circle', color: 'blue' },
-            { name: 'Game Wikis', icon: 'book-open', color: 'yellow' },
-        ]
-    },
-    {
-        id: 'research',
-        name: 'Research',
-        icon: 'compass',
-        color: 'teal',
-        description: 'Learning and research',
-        suggestedDocks: [
-            { name: 'Articles', icon: 'book-open', color: 'blue' },
-            { name: 'References', icon: 'database', color: 'gray' },
-            { name: 'Notes', icon: 'folder', color: 'yellow' },
-        ]
-    },
-];
+// Templates moved to separate file: src/shared/templates.ts
 
 // ============================================
 // IPC Event Types

@@ -874,8 +874,8 @@ function setupIPC(): void {
         return { success }
     })
 
-    ipcMain.handle('create-realm', (_, name: string, icon?: IconName, color?: ThemeColor) => {
-        const realm = createRealmFromParams(name, icon, color)
+    ipcMain.handle('create-realm', (_, name: string, icon?: IconName, color?: ThemeColor, template?: any) => {
+        const realm = createRealmFromParams(name, icon, color, template)
         if (win && !win.isDestroyed()) {
             win.webContents.send('realm-created', realm)
         }

@@ -165,7 +165,8 @@ export function setActiveRealmId(realmId: string): boolean {
 export function createRealmFromParams(
     name: string,
     icon: IconName = 'folder',
-    color: ThemeColor = 'blue'
+    color: ThemeColor = 'blue',
+    template?: { docks: { name: string; icon: IconName; color: ThemeColor }[] }
 ): Realm {
     ensureInitialized()
 
@@ -174,8 +175,22 @@ export function createRealmFromParams(
 
     const realm = createRealm(name, icon, color, maxOrder + 1)
     storeData!.realms.push(realm)
-    saveStoreDebounced()
 
+    // Create template docks if provided
+    if (template?.docks) {
+        template.docks.forEach((dockTemplate, index) => {
+            const dock = createDock(
+                dockTemplate.name,
+                realm.id,
+                dockTemplate.icon,
+                dockTemplate.color,
+                index
+            );
+            storeData!.docks.push(dock);
+        });
+    }
+
+    saveStoreDebounced()
 
     return realm
 }

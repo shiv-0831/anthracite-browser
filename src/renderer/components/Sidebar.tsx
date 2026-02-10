@@ -43,6 +43,7 @@ import { DockModal } from './DockModal';
 import { ContextMenu, useContextMenu, ContextMenuItem } from './ContextMenu';
 import { SortableTab, TabDragOverlay } from './SortableTab';
 import type { Realm, Dock as DockType, IconName, ThemeColor } from '../../shared/types';
+import type { RealmTemplate } from '../../shared/templates';
 
 interface SidebarProps {
     className?: string;
@@ -365,12 +366,14 @@ export function Sidebar({ className, isPinned, onPinnedChange, tabs, activeTabId
         setShowRealmModal(true);
     }, []);
 
-    const handleRealmModalSubmit = useCallback(async (data: { name: string; icon: IconName; color: ThemeColor }) => {
+
+
+    const handleRealmModalSubmit = useCallback(async (data: { name: string; icon: IconName; color: ThemeColor; template?: RealmTemplate }) => {
         if (editingRealm) {
             await window.electron?.realms.update(editingRealm.id, data);
             setEditingRealm(null);
         } else {
-            await window.electron?.realms.create(data.name, data.icon, data.color);
+            await window.electron?.realms.create(data.name, data.icon, data.color, data.template);
         }
     }, [editingRealm]);
 
