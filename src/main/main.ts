@@ -1,12 +1,27 @@
 import { app, BrowserWindow, BrowserView, ipcMain, session, Menu } from 'electron'
 import path from 'node:path'
 
+import { autoUpdater } from 'electron-updater'
+
 // Enable CDP remote debugging so the AI agent can connect to Anthracite's browser
 const CDP_PORT = 9222
 app.commandLine.appendSwitch('remote-debugging-port', String(CDP_PORT))
 import { spawn, ChildProcess } from 'node:child_process'
 import { ElectronBlocker, Request } from '@ghostery/adblocker-electron'
 import fetch from 'cross-fetch'
+
+
+// Auto-updater logging
+autoUpdater.logger = require("electron-log")
+    ; (autoUpdater.logger as any).transports.file.level = "info"
+
+app.on('ready', () => {
+    // Check for updates after a short delay
+    setTimeout(() => {
+        autoUpdater.checkForUpdatesAndNotify()
+    }, 2000)
+})
+
 
 
 
@@ -1347,7 +1362,11 @@ function createWindow(): void {
     Menu.setApplicationMenu(menu)
 
     // Load the UI
-    win.loadURL('http://127.0.0.1:5173')
+    if (app.isPackaged) {
+        win.loadFile(path.join(__dirname, '../dist/index.html'))
+    } else {
+        win.loadURL('http://127.0.0.1:5173')
+    }
 
     // DevTools: don't auto-open — it creates a devtools:// CDP target that
     // hangs browser-use's session initialization. Open manually with Cmd+Option+I.
@@ -1386,30 +1405,48 @@ function createWindow(): void {
 
 function startPythonBackend(): void {
     const isDev = !app.isPackaged
-    const pythonPath = isDev
-        ? path.join(__dirname, '../venv/bin/python3')
-        : path.join(process.resourcesPath, 'backend/venv/bin/python3')
+    // console.log('Starting Python Backend...', isDev ? '(Dev)' : '(Prod)')
 
-    console.log('Starting Python Backend...')
+    if (isDev) {
+        // Development: Run from venv
+        const pythonPath = path.join(__dirname, '../venv/bin/python3')
+        pythonProcess = spawn(pythonPath, [
+            '-m', 'uvicorn', 'backend.server:app',
+            '--host', '127.0.0.1',
+            '--port', '8000',
+            '--reload',
+            '--log-level', 'error'
+        ], {
+            cwd: path.join(__dirname, '../'),
+            stdio: 'inherit'
+        })
+    } else {
+        // Production: Run bundled executable (PyInstaller)
+        // The executable is copied to resources/backend/anthracite-server
+        // (nested folder due to --onedir)
+        const executableName = process.platform === 'win32' ? 'anthracite-server.exe' : 'anthracite-server'
+        // Simplified path: resources/backend/anthracite-server (executable)
+        const backendPath = path.join(process.resourcesPath, 'backend', executableName)
 
-    pythonProcess = spawn(pythonPath, [
-        '-m', 'uvicorn', 'backend.server:app',
-        '--host', '127.0.0.1',
-        '--port', '8000',
-        '--reload',
-        '--log-level', 'warning'
-    ], {
-        cwd: path.join(__dirname, '../'),
-        stdio: 'inherit'
-    })
+        // console.log('Backend executable path:', backendPath)
 
-    pythonProcess.on('close', (code) => {
-        console.log(`Python process exited with code ${code}`)
-    })
+        pythonProcess = spawn(backendPath, [], {
+            // No CWD needed as PyInstaller handles paths internally usually, 
+            // but setting it to the exe dir doesn't hurt.
+            cwd: path.dirname(backendPath),
+            stdio: 'inherit'
+        })
+    }
 
-    pythonProcess.on('error', (err) => {
-        console.error('Failed to start Python process:', err)
-    })
+    if (pythonProcess) {
+        pythonProcess.on('close', (code) => {
+            console.log(`Python process exited with code ${code}`)
+        })
+
+        pythonProcess.on('error', (err) => {
+            console.error('Failed to start Python process:', err)
+        })
+    }
 }
 
 function killPythonBackend(): void {

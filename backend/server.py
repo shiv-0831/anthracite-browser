@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+if not os.environ.get("OPENAI_API_KEY"):
+    logger.warning("OPENAI_API_KEY not found in environment. Agent features will be disabled.")
+
+
+if not os.environ.get("OPENAI_API_KEY"):
+    logger.warning("OPENAI_API_KEY not found in environment. Agent features will be disabled.")
+
+
 
 class AgentControl:
     """Global agent control state for stop/pause/resume."""
