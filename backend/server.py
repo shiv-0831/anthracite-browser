@@ -239,3 +239,9 @@ async def stream_agent(task: TaskRequest):
             yield _sse_event({"type": "error", "message": str(e)})
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+if __name__ == "__main__":
+    import uvicorn
+    # When running as a PyInstaller bundle, we need to start the server explicitly.
+    # We pass the 'app' object directly to avoid import string resolution issues in frozen mode.
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
