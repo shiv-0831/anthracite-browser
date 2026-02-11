@@ -1,7 +1,7 @@
 import { app, BrowserWindow, BrowserView, ipcMain, session, Menu } from 'electron'
 import path from 'node:path'
 
-// Enable CDP remote debugging so the AI agent can connect to Poseidon's browser
+// Enable CDP remote debugging so the AI agent can connect to Anthracite's browser
 const CDP_PORT = 9222
 app.commandLine.appendSwitch('remote-debugging-port', String(CDP_PORT))
 import { spawn, ChildProcess } from 'node:child_process'
@@ -191,13 +191,13 @@ function normalizeUrl(input: string): string {
     // Check if it looks like a URL
     const urlPattern = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/
     const localhostPattern = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/
-    const internalPattern = /^poseidon:\/\//
+    const internalPattern = /^anthracite:\/\//
     const aboutPattern = /^about:/
 
     const filePattern = /^file:\/\//
 
     if (urlPattern.test(url) || localhostPattern.test(url) || internalPattern.test(url) || aboutPattern.test(url) || filePattern.test(url)) {
-        if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('poseidon://') && !url.startsWith('about:') && !url.startsWith('file:')) {
+        if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('anthracite://') && !url.startsWith('about:') && !url.startsWith('file:')) {
             url = 'https://' + url
         }
         return url
@@ -227,7 +227,7 @@ function getSearchUrl(query: string, engine: string): string {
 // Tab Management
 // ============================================
 
-function createTab(url: string = 'poseidon://newtab', options?: { realmId?: string; dockId?: string }): Tab {
+function createTab(url: string = 'anthracite://newtab', options?: { realmId?: string; dockId?: string }): Tab {
     const id = generateTabId()
 
     const view = new BrowserView({
@@ -289,7 +289,7 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
 
     // Main navigation event - fires for full page loads
     view.webContents.on('did-navigate', (_, url) => {
-        // Don't overwrite poseidon:// URL when BrowserView loads about:blank for CDP
+        // Don't overwrite anthracite:// URL when BrowserView loads about:blank for CDP
         if (!(tab as any)._isInternalPage || !url.startsWith('about:')) {
             tab.url = url
             sendTabUpdate(tab)
@@ -309,7 +309,7 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     // Frame navigation - catches navigations in sub-frames
     view.webContents.on('did-frame-navigate', (_, url, httpResponseCode, httpStatusText, isMainFrame) => {
         if (isMainFrame) {
-            // Don't overwrite poseidon:// URL when BrowserView loads about:blank for CDP
+            // Don't overwrite anthracite:// URL when BrowserView loads about:blank for CDP
             if (!(tab as any)._isInternalPage || !url.startsWith('about:')) {
                 ; (tab as any)._isInternalPage = false
                 tab.url = url
@@ -322,7 +322,7 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     // Also update URL after page finishes loading (fallback)
     view.webContents.on('did-finish-load', () => {
         const currentUrl = view.webContents.getURL()
-        // Don't overwrite poseidon:// URL when BrowserView loads about:blank for CDP
+        // Don't overwrite anthracite:// URL when BrowserView loads about:blank for CDP
         if (currentUrl && currentUrl !== tab.url && !((tab as any)._isInternalPage && currentUrl.startsWith('about:'))) {
             tab.url = currentUrl
             sendTabUpdate(tab)
@@ -377,11 +377,11 @@ function createTab(url: string = 'poseidon://newtab', options?: { realmId?: stri
     }
 
     // Navigate to URL
-    // Internal pages (poseidon://) are rendered by the React webview, not the BrowserView.
+    // Internal pages (anthracite://) are rendered by the React webview, not the BrowserView.
     // But we still load about:blank into the BrowserView so it has a JS runtime
     // (required for CDP's Runtime.runIfWaitingForDebugger to not hang).
-    if (url === 'poseidon://newtab' || url === 'poseidon://settings') {
-        // Mark as internal so nav events don't overwrite the poseidon:// URL
+    if (url === 'anthracite://newtab' || url === 'anthracite://settings') {
+        // Mark as internal so nav events don't overwrite the anthracite:// URL
         ; (tab as any)._isInternalPage = true
         view.webContents.loadURL('about:blank')
     } else {
@@ -528,7 +528,7 @@ function safeEnableBlocking(sess: Electron.Session) {
 }
 
 const isLocal = (url: string) => {
-    return url.includes('localhost') || url.includes('127.0.0.1') || url.startsWith('file:') || url.startsWith('poseidon:')
+    return url.includes('localhost') || url.includes('127.0.0.1') || url.startsWith('file:') || url.startsWith('anthracite:')
 }
 
 function setupRequestInterceptor(sess: Electron.Session): void {
@@ -616,7 +616,7 @@ async function initAdBlocker(): Promise<void> {
         // Enable on default session (BrowserView tabs)
         if (adBlockEnabled) {
             safeEnableBlocking(session.defaultSession)
-            // Note: We do NOT enable on 'persist:poseidon' (internal webviews) to avoid
+            // Note: We do NOT enable on 'persist:anthracite' (internal webviews) to avoid
             // "Attempted to register a second handler" error from the library.
             // Internal pages don't need ad blocking anyway.
         }
@@ -672,7 +672,7 @@ function toggleHttpsUpgrade(enabled: boolean): void {
 function setupIPC(): void {
     // Tab management
     ipcMain.handle('create-tab', (_, url?: string, options?: { realmId?: string; dockId?: string }) => {
-        // Use createTab's default (poseidon://newtab) when no URL provided
+        // Use createTab's default (anthracite://newtab) when no URL provided
         const tab = url ? createTab(url, options) : createTab(undefined, options)
         switchToTab(tab.id)
         return { id: tab.id, realmId: getTabOrganization(tab.id)?.realmId }
@@ -691,7 +691,7 @@ function setupIPC(): void {
             existingTargetIds = new Set(before.map((t: any) => t.id))
         } catch { /* ignore */ }
 
-        const tab = createTab('poseidon://newtab')
+        const tab = createTab('anthracite://newtab')
         switchToTab(tab.id)
 
         // Find the new CDP target by diffing before/after
@@ -1271,7 +1271,7 @@ function createWindow(): void {
     // Instead, Cmd+R reloads the active tab's webview content
     const menu = Menu.buildFromTemplate([
         {
-            label: 'Poseidon',
+            label: 'Anthracite',
             submenu: [
                 { role: 'about' },
                 { type: 'separator' },
@@ -1356,7 +1356,7 @@ function createWindow(): void {
     win.webContents.on('did-finish-load', () => {
         // Guard: only create a tab on first load, not on renderer reload
         if (tabs.size === 0) {
-            const tab = createTab('poseidon://newtab')
+            const tab = createTab('anthracite://newtab')
             switchToTab(tab.id)
         } else {
             // Renderer reloaded - resync existing tabs
@@ -1377,7 +1377,7 @@ function createWindow(): void {
 
     // Enable ad-blocking on webview tags when they are attached
     // Aggressive Popup Blocking for webviews logic removed to prevent "second handler" crash.
-    // Internal pages (persist:poseidon) do not need ad/popup blocking.
+    // Internal pages (persist:anthracite) do not need ad/popup blocking.
 }
 
 // ============================================
@@ -1456,7 +1456,7 @@ app.whenReady().then(async () => {
 
     // Set Chrome user agent for the webview partition to ensure websites
     // (like YouTube) serve the full desktop version, not simplified layouts
-    const webviewSession = session.fromPartition('persist:poseidon')
+    const webviewSession = session.fromPartition('persist:anthracite')
     webviewSession.setUserAgent(
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
     )

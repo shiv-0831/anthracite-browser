@@ -1,18 +1,18 @@
-# Contributing to Poseidon
+# Contributing to Anthracite
 
 First off, thanks for taking the time to contribute! 🎉
 
-The following is a set of guidelines for contributing to Poseidon. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+The following is a set of guidelines for contributing to Anthracite. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the [Poseidon Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to the project maintainers.
+This project and everyone participating in it is governed by the [Anthracite Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to the project maintainers.
 
 ## How Can I Contribute?
 
 ### Reporting Bugs
 
-This section guides you through submitting a bug report for Poseidon. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
+This section guides you through submitting a bug report for Anthracite. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
 
 - **Use a clear and descriptive title** for the issue to identify the problem.
 - **Describe the exact steps which reproduce the problem** in as many details as possible.
@@ -23,7 +23,7 @@ This section guides you through submitting a bug report for Poseidon. Following 
 
 ### Suggesting Enhancements
 
-This section guides you through submitting an enhancement suggestion for Poseidon, including completely new features and minor improvements to existing functionality.
+This section guides you through submitting an enhancement suggestion for Anthracite, including completely new features and minor improvements to existing functionality.
 
 - **Use a clear and descriptive title** for the issue to identify the suggestion.
 - **Provide a step-by-step description of the suggested enhancement** in as many details as possible.
@@ -34,10 +34,10 @@ This section guides you through submitting an enhancement suggestion for Poseido
 
 The process described here has several goals:
 
-- Maintain Poseidon's quality
+- Maintain Anthracite's quality
 - Fix problems that are important to users
-- Engage the community in working toward the best possible Poseidon
-- Enable a sustainable system for Poseidon's maintainers to review contributions
+- Engage the community in working toward the best possible Anthracite
+- Enable a sustainable system for Anthracite's maintainers to review contributions
 
 Please follow these steps to have your contribution considered by the maintainers:
 

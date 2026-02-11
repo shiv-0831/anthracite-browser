@@ -38,7 +38,7 @@ interface StoreData {
     }>
 }
 
-const STORE_FILE = 'poseidon-realms.json'
+const STORE_FILE = 'anthracite-realms.json'
 const CURRENT_VERSION = 1
 
 // ============================================

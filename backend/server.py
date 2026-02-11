@@ -76,7 +76,7 @@ class TaskRequest(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"status": "Poseidon Backend Running"}
+    return {"status": "Anthracite Backend Running"}
 
 @app.post("/agent/run")
 async def run_agent(task: TaskRequest):

@@ -140,7 +140,7 @@ function prepareStatements(): void {
  */
 export function addHistoryEntry(url: string, title?: string, favicon?: string): void {
     // Skip internal URLs
-    if (url.startsWith('poseidon://') || url.startsWith('about:') || url.startsWith('chrome:')) {
+    if (url.startsWith('anthracite://') || url.startsWith('about:') || url.startsWith('chrome:')) {
         return
     }
 

@@ -1,5 +1,5 @@
 /**
- * Shared Type Definitions for Poseidon Browser
+ * Shared Type Definitions for Anthracite Browser
  *
  * Core types for the Realms & Docks organizational system.
  * Used by both main process and renderer.

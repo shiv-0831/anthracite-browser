@@ -110,7 +110,7 @@ const WebviewController = React.memo(({ tab, isActive, lastWebUrl, onUpdate, onM
     // Determine the URL for the webview.
     // If on an internal page but we have a lastWebUrl, keep using that to preserve history.
     // Otherwise, use about:blank for internal pages.
-    const isInternalUrl = tab.url.startsWith('poseidon://');
+    const isInternalUrl = tab.url.startsWith('anthracite://');
     const webviewSrc = isInternalUrl
         ? (lastWebUrl || 'about:blank') // Preserve last web URL for history, fallback to about:blank
         : tab.url;
@@ -127,7 +127,7 @@ const WebviewController = React.memo(({ tab, isActive, lastWebUrl, onUpdate, onM
                 src={webviewSrc}
                 className="h-full w-full"
                 webpreferences="contextIsolation=yes, nodeIntegration=no"
-                partition="persist:poseidon"
+                partition="persist:anthracite"
                 preload={webviewPreloadPath}
                 // @ts-ignore
                 allowpopups="true"
@@ -213,9 +213,9 @@ function App() {
     }, []);
 
     const activeTab = tabs.find(t => t.id === activeTabId);
-    const isHomePage = activeTab?.url === 'poseidon://newtab';
-    const isSettingsPage = activeTab?.url === 'poseidon://settings';
-    const isInternalPage = activeTab?.url?.startsWith('poseidon://');
+    const isHomePage = activeTab?.url === 'anthracite://newtab';
+    const isSettingsPage = activeTab?.url === 'anthracite://settings';
+    const isInternalPage = activeTab?.url?.startsWith('anthracite://');
 
     // ... existing keyboard shortcut ...
     useEffect(() => {
@@ -313,7 +313,7 @@ function App() {
             t.id === tabId ? { ...t, ...data } : t
         ));
         // 2. Track web content for back/forward navigation
-        if (data.url && !data.url.startsWith('poseidon://')) {
+        if (data.url && !data.url.startsWith('anthracite://')) {
             setTabsWithWebview(prev => {
                 if (prev.has(tabId)) return prev;
                 const next = new Set(prev);
@@ -344,7 +344,7 @@ function App() {
     const handleNavigate = useCallback((url: string) => {
         if (!activeTabId) return;
         const webview = webviewRefs.current.get(activeTabId);
-        if (webview && !url.startsWith('poseidon://')) {
+        if (webview && !url.startsWith('anthracite://')) {
             webview.src = url;
         }
         // Also notify main process
@@ -359,12 +359,12 @@ function App() {
 
         if (webview && webview.canGoBack()) {
             webview.goBack();
-        } else if (tab && !tab.url.startsWith('poseidon://')) {
+        } else if (tab && !tab.url.startsWith('anthracite://')) {
             // Webview can't go back further — return to home page
             // Update tab URL to home page (webview stays alive but hidden)
-            window.electron?.navigation.navigate('poseidon://newtab');
+            window.electron?.navigation.navigate('anthracite://newtab');
             setTabs(prev => prev.map(t =>
-                t.id === activeTabId ? { ...t, url: 'poseidon://newtab', title: 'New Tab', canGoBack: false, canGoForward: true } : t
+                t.id === activeTabId ? { ...t, url: 'anthracite://newtab', title: 'New Tab', canGoBack: false, canGoForward: true } : t
             ));
         }
     }, [activeTabId, tabs]);
@@ -374,7 +374,7 @@ function App() {
         const tab = tabs.find(t => t.id === activeTabId);
         const webview = webviewRefs.current.get(activeTabId);
 
-        if (tab?.url.startsWith('poseidon://') && webview) {
+        if (tab?.url.startsWith('anthracite://') && webview) {
             // On an internal page with a preserved webview — restore the web URL.
             // The webview still has the page loaded (we just overlaid the home page on top).
             // Update tab URL to show the webview again.
@@ -427,7 +427,7 @@ function App() {
     useEffect(() => {
         if (window.electron?.navigation?.onNavigateToUrl) {
             const unsubscribe = window.electron.navigation.onNavigateToUrl(({ tabId, url }) => {
-                if (url.startsWith('poseidon://')) return;
+                if (url.startsWith('anthracite://')) return;
                 // Mark this tab as having web content (keep webview alive)
                 setTabsWithWebview(prev => {
                     if (prev.has(tabId)) return prev;
@@ -536,7 +536,7 @@ function App() {
 
                         {/* Browser Views */}
                         {tabs.map(tab => {
-                            const hasWebContent = !tab.url.startsWith('poseidon://');
+                            const hasWebContent = !tab.url.startsWith('anthracite://');
                             const hadWebContent = tabsWithWebview.has(tab.id);
                             if (!hasWebContent && !hadWebContent) return null;
 

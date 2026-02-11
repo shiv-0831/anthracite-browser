@@ -123,7 +123,7 @@ export function HomePage({ className }: HomePageProps) {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.1 }}
                     >
-                        Poseidon
+                        Anthracite
                     </motion.h2>
 
                     {/* Greeting */}

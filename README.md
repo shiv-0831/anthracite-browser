@@ -1,8 +1,8 @@
-# Poseidon Browser
+# Anthracite Browser
 
 The Open Source "Do It For Me" Browser.
 
-Poseidon is a desktop browser that replaces the URL bar with a Command Bar. Instead of navigating yourself, you tell the Agent what to do, and it drives the browser for you.
+Anthracite is a desktop browser that replaces the URL bar with a Command Bar. Instead of navigating yourself, you tell the Agent what to do, and it drives the browser for you.
 
 ## Features
 
@@ -53,7 +53,7 @@ Poseidon is a desktop browser that replaces the URL bar with a Command Bar. Inst
 ## Project Structure
 
 ```
-poseidon/
+anthracite/
 ├── src/                # Electron Main & Renderer process code
 │   ├── main/           # Main process (Node.js)
 │   └── renderer/       # Renderer process (React)
@@ -69,7 +69,7 @@ We welcome contributions from the community!
 
 - **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started.
 - **Code of Conduct**: See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our community standards.
-- **Issues**: Found a bug or have a feature request? Open an [issue](https://github.com/Antigravity/poseidon/issues).
+- **Issues**: Found a bug or have a feature request? Open an [issue](https://github.com/Antigravity/anthracite/issues).
 
 ## License
 

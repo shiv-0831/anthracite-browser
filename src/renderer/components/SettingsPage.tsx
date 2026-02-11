@@ -211,7 +211,7 @@ export function SettingsPage({ className }: SettingsPageProps) {
 
     // Navigate back
     const handleBack = useCallback(() => {
-        window.electron?.navigation.navigate('poseidon://newtab');
+        window.electron?.navigation.navigate('anthracite://newtab');
     }, []);
 
     if (!settings) {
@@ -332,7 +332,7 @@ export function SettingsPage({ className }: SettingsPageProps) {
                             <SectionHeader
                                 icon={Palette}
                                 title="Appearance"
-                                description="Customize how Poseidon looks"
+                                description="Customize how Anthracite looks"
                             />
                             <div className="bg-white/[0.03] rounded-xl border border-white/[0.06] p-4">
                                 <SettingRow
@@ -528,7 +528,7 @@ export function SettingsPage({ className }: SettingsPageProps) {
 
                                 <SettingRow
                                     label="Clear History on Exit"
-                                    description="Automatically clear browsing history when closing Poseidon"
+                                    description="Automatically clear browsing history when closing Anthracite"
                                 >
                                     <Toggle
                                         enabled={settings.clearHistoryOnExit}
@@ -603,7 +603,7 @@ export function SettingsPage({ className }: SettingsPageProps) {
 
                                 <SettingRow
                                     label="Restore Tabs on Startup"
-                                    description="Reopen tabs from your last session when starting Poseidon"
+                                    description="Reopen tabs from your last session when starting Anthracite"
                                 >
                                     <Toggle
                                         enabled={settings.restoreTabsOnStartup}
@@ -635,7 +635,7 @@ export function SettingsPage({ className }: SettingsPageProps) {
                             </div>
 
                             <div className="mt-6 p-4 bg-white/[0.03] rounded-xl border border-white/[0.06]">
-                                <h4 className="text-sm font-medium text-text-primary mb-2">About Poseidon</h4>
+                                <h4 className="text-sm font-medium text-text-primary mb-2">About Anthracite</h4>
                                 <div className="space-y-1 text-xs text-text-tertiary">
                                     <p>Version: 0.1.0 (Beta)</p>
                                     <p>Built with Electron + React + TypeScript</p>

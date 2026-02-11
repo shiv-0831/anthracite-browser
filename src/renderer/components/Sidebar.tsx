@@ -1015,7 +1015,7 @@ export function Sidebar({ className, isPinned, onPinnedChange, tabs, activeTabId
                         <div className="flex items-center gap-2.5">
                             <div className="flex flex-col">
                                 <span className="font-semibold text-sm text-text-primary tracking-tight">
-                                    {currentRealm?.name || 'Poseidon'}
+                                    {currentRealm?.name || 'Anthracite'}
                                 </span>
                                 <span className="text-[10px] text-text-tertiary font-medium">
                                     {activeRealmTabs.length} tabs
@@ -1261,7 +1261,7 @@ export function Sidebar({ className, isPinned, onPinnedChange, tabs, activeTabId
                         )}
 
                         <button
-                            onClick={() => window.electron?.navigation.navigate('poseidon://settings')}
+                            onClick={() => window.electron?.navigation.navigate('anthracite://settings')}
                             className="flex items-center w-full gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:bg-white/[0.06] hover:text-text-primary transition-all duration-200"
                         >
                             <Settings className="h-[18px] w-[18px] shrink-0" />

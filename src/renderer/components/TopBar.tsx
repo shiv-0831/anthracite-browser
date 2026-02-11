@@ -92,7 +92,7 @@ export function TopBar({
                 setActiveTab(tab);
                 activeTabIdRef.current = tab?.id || null;
                 // Don't show internal URLs in the search bar
-                const isInternalUrl = tab?.url.startsWith('poseidon://') || tab?.url.startsWith('about:');
+                const isInternalUrl = tab?.url.startsWith('anthracite://') || tab?.url.startsWith('about:');
                 if (tab && !isInternalUrl) {
                     setInputValue(tab.url);
                 }
@@ -102,7 +102,7 @@ export function TopBar({
             const unsubscribe = window.electron.tabs.onActiveTabChanged((tab) => {
                 setActiveTab(tab);
                 activeTabIdRef.current = tab?.id || null;
-                const isInternalUrl = tab?.url.startsWith('poseidon://') || tab?.url.startsWith('about:');
+                const isInternalUrl = tab?.url.startsWith('anthracite://') || tab?.url.startsWith('about:');
                 if (tab && !isEditing && !isInternalUrl) {
                     setInputValue(tab.url);
                 } else if (isInternalUrl) {
@@ -116,7 +116,7 @@ export function TopBar({
                 if (activeTabIdRef.current && tab.id === activeTabIdRef.current) {
                     setActiveTab(prev => prev ? { ...prev, ...tab } : null);
                     // Always update URL when navigation happens (unless editing)
-                    const isInternalUrl = tab.url.startsWith('poseidon://') || tab.url.startsWith('about:');
+                    const isInternalUrl = tab.url.startsWith('anthracite://') || tab.url.startsWith('about:');
                     if (!isInternalUrl) {
                         // Use functional update to check isEditing state
                         setInputValue(prevInput => {
@@ -277,7 +277,7 @@ export function TopBar({
         setAgentStatus('Starting...');
         setIsAgentPaused(false);
         try {
-            // 1. Create a new agent tab inside Poseidon and get CDP info
+            // 1. Create a new agent tab inside Anthracite and get CDP info
             const agentTab = await (window as any).electron.agent.createAgentTab();
 
             // 2. Stream agent task via SSE
@@ -356,7 +356,7 @@ export function TopBar({
         setIsFocused(true);
         setIsEditing(true);
         // Clear internal URLs and select text
-        if (activeTab?.url.startsWith('poseidon://')) {
+        if (activeTab?.url.startsWith('anthracite://')) {
             setInputValue('');
         } else {
             setTimeout(() => inputRef.current?.select(), 0);
@@ -374,7 +374,7 @@ export function TopBar({
             setIsEditing(false);
             setShowSuggestions(false);
             // Reset to current URL if not submitted
-            if (activeTab && !activeTab.url.startsWith('poseidon://')) {
+            if (activeTab && !activeTab.url.startsWith('anthracite://')) {
                 setInputValue(activeTab.url);
             }
         }, 200);
@@ -474,7 +474,7 @@ export function TopBar({
                     <input
                         ref={inputRef}
                         type="text"
-                        value={isEditing ? inputValue : (activeTab?.url === 'poseidon://newtab' ? '' : getDomain(displayUrl))}
+                        value={isEditing ? inputValue : (activeTab?.url === 'anthracite://newtab' ? '' : getDomain(displayUrl))}
                         onChange={(e) => handleInputChange(e.target.value)}
                         onFocus={handleFocus}
                         onBlur={handleBlur}
