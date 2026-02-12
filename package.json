@@ -1,7 +1,7 @@
 {
   "name": "anthracite-app",
   "productName": "Anthracite",
-  "version": "0.1.0",
+  "version": "0.1.1-alpha",
   "description": "Desktop Agent Browser powered by browser-use",
   "main": "dist-electron/main.js",
   "scripts": {
