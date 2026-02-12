@@ -241,6 +241,9 @@ contextBridge.exposeInMainWorld('electron', {
     sidebarState: {
         get: () => ipcRenderer.invoke('get-sidebar-state'),
     },
+
+    // App Info
+    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 })
 
 // ============================================
@@ -391,6 +394,7 @@ declare global {
             sidebarState: {
                 get: () => Promise<{ activeRealmId: string; realms: Realm[]; docks: Dock[]; tabs: OrganizedTabInfo[] }>
             }
+            getAppVersion: () => Promise<string>
         }
     }
 }

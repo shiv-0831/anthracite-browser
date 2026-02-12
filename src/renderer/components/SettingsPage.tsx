@@ -154,6 +154,7 @@ export function SettingsPage({ className }: SettingsPageProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [showApiKey, setShowApiKey] = useState(false);
     const [apiKeyTestStatus, setApiKeyTestStatus] = useState<'success' | 'error' | 'testing' | null>(null);
+    const [appVersion, setAppVersion] = useState<string>('');
 
     // Load settings on mount
     useEffect(() => {
@@ -161,6 +162,16 @@ export function SettingsPage({ className }: SettingsPageProps) {
             if (window.electron?.settings) {
                 const loadedSettings = await window.electron.settings.getAll();
                 setSettings(loadedSettings);
+            }
+
+            // Load app version
+            try {
+                if (window.electron?.getAppVersion) {
+                    const version = await window.electron.getAppVersion();
+                    setAppVersion(version);
+                }
+            } catch (err) {
+                console.error('Failed to get app version:', err);
             }
         };
         loadSettings();
@@ -733,8 +744,7 @@ export function SettingsPage({ className }: SettingsPageProps) {
                             <div className="mt-6 p-4 bg-white/[0.03] rounded-xl border border-white/[0.06]">
                                 <h4 className="text-sm font-medium text-text-primary mb-2">About Anthracite</h4>
                                 <div className="space-y-1 text-xs text-text-tertiary">
-                                    <p>Version: 0.1.0 (Beta)</p>
-                                    <p>Built with Electron + React + TypeScript</p>
+                                    <p>Version: {appVersion}</p>
                                 </div>
                             </div>
                         </section>
