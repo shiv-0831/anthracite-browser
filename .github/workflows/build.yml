@@ -84,8 +84,8 @@ jobs:
       - name: Build Electron app (Windows)
         if: runner.os == 'Windows'
         run: |
-          set WIN_CSC_LINK=
-          set WIN_CSC_KEY_PASSWORD=
+          $env:WIN_CSC_LINK=""
+          $env:WIN_CSC_KEY_PASSWORD=""
           npm run build
         env:
           DEBUG: electron-builder
