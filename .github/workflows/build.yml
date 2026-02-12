@@ -67,45 +67,11 @@ jobs:
           .\venv\Scripts\activate
           python backend/build.py
       
-      - name: Debug - List directory structure
-        if: runner.os != 'Windows'
-        run: |
-          echo "=== Current directory ==="
-          pwd
-          echo "=== Repository root contents ==="
-          ls -la
-          echo "=== Build directory ==="
-          ls -la build/ || echo "build/ not found"
-          echo "=== Dist directory ==="
-          ls -la dist/ || echo "dist/ not found"
-          echo "=== Backend dist ==="
-          ls -la backend/dist/ || echo "backend/dist/ not found"
-      
-      - name: Build Electron app (Mac/Linux)
-        if: runner.os != 'Windows'
+      - name: Build Electron app
         run: npm run build
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Electron app (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          $env:WIN_CSC_LINK=""
-          $env:WIN_CSC_KEY_PASSWORD=""
-          npm run build
         env:
           DEBUG: electron-builder
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Debug - List output directories
-        shell: bash
-        run: |
-          echo "=== Root Listing ==="
-          ls -la
-          echo "=== Release Directory ==="
-          ls -la release/ || echo "release/ not found"
-          echo "=== Dist Directory ==="
-          ls -la dist/ || echo "dist/ not found"
       
       - name: Upload artifacts (macOS)
         if: runner.os == 'macOS'
